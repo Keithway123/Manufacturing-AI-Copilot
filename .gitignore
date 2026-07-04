@@ -1,0 +1,22 @@
+# Project memory / private learning notes
+AGENTS.md
+docs/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Secrets
+.env
+.env.*
+
+# Local data / generated files
+data/
+storage/
