@@ -1,0 +1,19 @@
+[project]
+name = "manufacturing-ai-copilot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Keithway123", email = "keithsway802@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.139.0",
+    "llama-index>=0.14.23",
+    "pyyaml>=6.0.3",
+    "uvicorn[standard]>=0.50.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.21,<0.12.0"]
+build-backend = "uv_build"
