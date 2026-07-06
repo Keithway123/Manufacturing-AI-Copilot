@@ -19,5 +19,4 @@ venv/
 .obsidian
 
 # Local data / generated files
-data/
 storage/
