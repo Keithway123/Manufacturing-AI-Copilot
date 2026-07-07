@@ -68,3 +68,47 @@ def query_index(storage_dir: Path, question: str, similarity_top_k: int = 3) -> 
         lines.append("-" * 40)
 
     return "\n".join(lines)
+
+
+def build_retrieval_answer(matches: list[dict]) -> str:
+    if not matches:
+        return "未在当前知识库中找到相关内容。"
+
+    top_match = matches[0]
+    title = top_match.get("title") or "相关文档"
+    content = top_match.get("content") or ""
+
+    preview = content[:600].strip()
+
+    return f"根据《{title}》中的相关内容: \n\n{preview}"
+
+
+def chat_with_retrieval(
+    storage_dir: Path,
+    question: str,
+    similarity_top_k: int = 3,
+) -> dict:
+
+    matches = retrieve_matches(
+        storage_dir=storage_dir,
+        question=question,
+        similarity_top_k=similarity_top_k,
+    )
+
+    answer = build_retrieval_answer(matches)
+
+    sources = []
+    for match in matches:
+        sources.append(
+            {
+                "title": match.get("title"),
+                "document": match.get("document"),
+                "score": match.get("score"),
+            }
+        )
+
+    return {
+        "question": question,
+        "answer": answer,
+        "sources": sources,
+    }

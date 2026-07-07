@@ -4,7 +4,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from manufacturing_ai_copilot.core.config import SERVICE_NAME, VERSION, STORAGE_DIR
-from manufacturing_ai_copilot.rag.query_engine import retrieve_matches
+from manufacturing_ai_copilot.rag.query_engine import (
+    retrieve_matches,
+    chat_with_retrieval,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,23 @@ class SearchResponse(BaseModel):
     question: str
     top_k: int
     matches: list[SearchMatch]
+
+
+class ChatRequest(BaseModel):
+    question: str = Field(..., min_length=1)
+    top_k: int = Field(default=3, ge=1, le=10)
+
+
+class ChatSource(BaseModel):
+    title: str | None
+    document: str | None
+    score: float | None
+
+
+class ChatResponse(BaseModel):
+    question: str
+    answer: str
+    sources: list[ChatSource]
 
 
 @app.get("/health")
@@ -67,3 +87,25 @@ def search_documents(request: SearchRequest) -> SearchResponse:
         top_k=request.top_k,
         matches=matches,
     )
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest) -> ChatResponse:
+    try:
+        result = chat_with_retrieval(
+            storage_dir=STORAGE_DIR,
+            question=request.question,
+            similarity_top_k=request.top_k,
+        )
+
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    except Exception as exc:
+        logger.exception("RAG chat failed")
+        raise HTTPException(
+            status_code=500,
+            detail="RAG chat failed. Check server logs.",
+        ) from exc
+
+    return ChatResponse(**result)
