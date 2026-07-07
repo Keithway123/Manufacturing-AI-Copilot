@@ -2,12 +2,11 @@ from pathlib import Path
 
 import yaml
 from llama_index.core import Document, VectorStoreIndex
-from llama_index.core import Settings
-from llama_index.embeddings.dashscope import DashScopeEmbedding
+from manufacturing_ai_copilot.rag.embedding import configure_embedding
+from llama_index.core.node_parser import SentenceSplitter
 
-
-def _configure_embedding() -> None:
-    Settings.embed_model = DashScopeEmbedding(model_name="text-embedding-v3")
+DEFAULT_CHUNK_SIZE = 500
+DEFAULT_CHUNK_OVERLAP = 50
 
 
 def _parse_markdown_with_metadata(path: Path) -> Document:
@@ -35,9 +34,17 @@ def load_markdown_documents(raw_dir: Path) -> list[Document]:
 
 
 def build_index(raw_dir: Path, storage_dir: Path) -> None:
-    _configure_embedding()
+    configure_embedding()
     documents = load_markdown_documents(raw_dir)
     storage_dir.mkdir(parents=True, exist_ok=True)
 
-    index = VectorStoreIndex.from_documents(documents)
+    splitter = SentenceSplitter(
+        chunk_size=DEFAULT_CHUNK_SIZE,
+        chunk_overlap=DEFAULT_CHUNK_OVERLAP,
+    )
+
+    index = VectorStoreIndex.from_documents(
+        documents,
+        transformations=[splitter],
+    )
     index.storage_context.persist(persist_dir=str(storage_dir))
