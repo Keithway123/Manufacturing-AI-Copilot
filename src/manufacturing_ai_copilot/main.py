@@ -1,8 +1,12 @@
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from manufacturing_ai_copilot.core.config import SERVICE_NAME, VERSION, STORAGE_DIR
 from manufacturing_ai_copilot.rag.query_engine import retrieve_matches
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title=SERVICE_NAME, version=VERSION)
 
@@ -40,12 +44,23 @@ def health_check() -> dict[str, str]:
 
 @app.post("/search", response_model=SearchResponse)
 def search_documents(request: SearchRequest) -> SearchResponse:
-    # API 层只负责接收请求和返回响应，RAG 细节放在 query_engine.py
-    matches = retrieve_matches(
-        storage_dir=STORAGE_DIR,
-        question=request.question,
-        similarity_top_k=request.top_k,
-    )
+    try:
+        # API 层只负责接收请求和返回响应，RAG 细节放在 query_engine.py
+        matches = retrieve_matches(
+            storage_dir=STORAGE_DIR,
+            question=request.question,
+            similarity_top_k=request.top_k,
+        )
+    except FileNotFoundError as exc:
+        # storage 不存在或索引没构建时，说明服务暂时不可用
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    except Exception as exc:
+        logger.exception("RAG search failed")
+        raise HTTPException(
+            status_code=500,
+            detail="RAG search failed. Check server logs.",
+        ) from exc
 
     return SearchResponse(
         question=request.question,

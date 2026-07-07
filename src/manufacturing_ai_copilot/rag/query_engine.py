@@ -5,13 +5,18 @@ from manufacturing_ai_copilot.rag.embedding import configure_embedding
 
 
 def load_retriever(storage_dir: Path, similarity_top_k: int = 3):
+    index_store_path = storage_dir / "index_store.json"
+    if not index_store_path.exists():
+        raise FileNotFoundError(
+            f"RAG index not found: {index_store_path}. Run scripts.build_index first."
+        )
+
     configure_embedding()
 
     storage_context = StorageContext.from_defaults(persist_dir=str(storage_dir))
 
     index = load_index_from_storage(storage_context)
 
-    # return index.as_query_engine()
     return index.as_retriever(similarity_top_k=similarity_top_k)
 
 
@@ -54,12 +59,12 @@ def query_index(storage_dir: Path, question: str, similarity_top_k: int = 3) -> 
     )
 
     lines = []
+
     for match in matches:
-        for match in matches:
-            lines.append(f"score:{match['score']}")
-            lines.append(f"document:{match['document']}")
-            lines.append(f"title:{match['title']}")
-            lines.append(match["content"][:500])
-            lines.append("-" * 40)
+        lines.append(f"score:{match['score']}")
+        lines.append(f"document:{match['document']}")
+        lines.append(f"title:{match['title']}")
+        lines.append(match["content"][:500])
+        lines.append("-" * 40)
 
     return "\n".join(lines)

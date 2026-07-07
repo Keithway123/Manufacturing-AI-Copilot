@@ -6,7 +6,7 @@ from manufacturing_ai_copilot.rag.query_engine import query_index
 
 def main() -> None:
     if len(sys.argv) < 2:
-        raise ValueError("Usage: python -m scripts.query_index <queston>")
+        raise ValueError("Usage: python -m scripts.query_index <question>")
 
     question = " ".join(sys.argv[1:])
 
