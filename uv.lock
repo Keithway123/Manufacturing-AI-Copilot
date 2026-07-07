@@ -996,6 +996,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "llama-index" },
     { name = "llama-index-embeddings-dashscope" },
+    { name = "openai" },
     { name = "pyyaml" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1005,6 +1006,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.139.0" },
     { name = "llama-index", specifier = ">=0.14.23" },
     { name = "llama-index-embeddings-dashscope", specifier = ">=0.5.0" },
+    { name = "openai", specifier = ">=2.44.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.50.0" },
 ]
