@@ -8,3 +8,5 @@ STORAGE_DIR = PROJECT_ROOT / "storage"
 
 LLM_MODEL = "qwen3.7-plus"
 DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+MIN_RETRIEVAL_SCORE = 0.6

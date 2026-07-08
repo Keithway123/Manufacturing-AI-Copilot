@@ -3,6 +3,21 @@ from pathlib import Path
 from llama_index.core import StorageContext, load_index_from_storage
 from manufacturing_ai_copilot.rag.embedding import configure_embedding
 from manufacturing_ai_copilot.rag.llm import generate_answer_with_qwen
+from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE
+
+
+def filter_matches_by_score(
+    matches: list[dict],
+    min_score: float = MIN_RETRIEVAL_SCORE,
+) -> list[dict]:
+    filtered_matches = []
+
+    for match in matches:
+        score = match.get("score")
+        if score is not None and score >= min_score:
+            filtered_matches.append(match)
+
+    return filtered_matches
 
 
 def load_retriever(storage_dir: Path, similarity_top_k: int = 3):
@@ -97,14 +112,15 @@ def chat_with_retrieval(
         similarity_top_k=similarity_top_k,
     )
     # answer = build_retrieval_answer(matches)
+    filtered_matches = filter_matches_by_score(matches)
 
     answer = generate_answer_with_qwen(
         question=question,
-        matches=matches,
+        matches=filtered_matches,
     )
 
     sources = []
-    for match in matches:
+    for match in filtered_matches:
         sources.append(
             {
                 "title": match.get("title"),
