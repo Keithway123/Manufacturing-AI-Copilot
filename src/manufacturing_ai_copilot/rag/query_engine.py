@@ -141,6 +141,19 @@ def chat_with_retrieval(
     # answer = build_retrieval_answer(matches)
     filtered_matches = filter_matches_by_score(matches)
 
+    if not filtered_matches:
+        return {
+            "question": question,
+            "answer": "当前知识库未找到足够相关的内容，请换个问法或补充资料",
+            "sources": [],
+            "retrieval": {
+                "top_k": similarity_top_k,
+                "min_score": MIN_RETRIEVAL_SCORE,
+                "retrieved_count": len(matches),
+                "used_count": 0,
+            },
+        }
+
     answer = generate_answer_with_qwen(
         question=question,
         matches=filtered_matches,
