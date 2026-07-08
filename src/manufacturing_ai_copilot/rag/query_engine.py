@@ -3,7 +3,7 @@ from pathlib import Path
 from llama_index.core import StorageContext, load_index_from_storage
 from manufacturing_ai_copilot.rag.embedding import configure_embedding
 from manufacturing_ai_copilot.rag.llm import generate_answer_with_qwen
-from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE
+from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE, NO_ANSWER_MESSAGE
 
 
 def filter_matches_by_score(
@@ -144,7 +144,7 @@ def chat_with_retrieval(
     if not filtered_matches:
         return {
             "question": question,
-            "answer": "当前知识库未找到足够相关的内容，请换个问法或补充资料",
+            "answer": NO_ANSWER_MESSAGE,
             "sources": [],
             "retrieval": {
                 "top_k": similarity_top_k,

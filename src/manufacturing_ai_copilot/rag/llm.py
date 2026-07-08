@@ -23,7 +23,9 @@ def _build_context(matches: list[dict]) -> str:
 
 def generate_answer_with_qwen(question: str, matches: list[dict]) -> str:
     if not matches:
-        return "未在当前知识库中找到相关内容。"
+        raise ValueError(
+            "generate_answer_with_qwen requires at least one retrieved match."
+        )
 
     api_key = os.getenv("DASHSCOPE_API_KEY")
     if not api_key:

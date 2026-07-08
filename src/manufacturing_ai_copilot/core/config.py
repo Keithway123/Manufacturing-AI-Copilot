@@ -10,3 +10,5 @@ LLM_MODEL = "qwen3.7-plus"
 DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 MIN_RETRIEVAL_SCORE = 0.6
+
+NO_ANSWER_MESSAGE = "当前知识库未找到足够相关的内容，请换个问法或补充资料。"
