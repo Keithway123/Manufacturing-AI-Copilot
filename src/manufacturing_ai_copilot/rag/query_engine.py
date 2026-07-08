@@ -133,4 +133,10 @@ def chat_with_retrieval(
         "question": question,
         "answer": answer,
         "sources": sources,
+        "retrieval": {
+            "top_k": similarity_top_k,
+            "min_score": MIN_RETRIEVAL_SCORE,
+            "retrieved_count": len(matches),
+            "used_count": len(filtered_matches),
+        },
     }

@@ -47,10 +47,18 @@ class ChatSource(BaseModel):
     score: float | None
 
 
+class ChatRetrievalInfo(BaseModel):
+    top_k: int
+    min_score: float
+    retrieved_count: int
+    used_count: int
+
+
 class ChatResponse(BaseModel):
     question: str
     answer: str
     sources: list[ChatSource]
+    retrieval: ChatRetrievalInfo
 
 
 @app.get("/health")
