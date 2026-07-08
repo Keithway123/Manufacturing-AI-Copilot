@@ -2,6 +2,7 @@ from pathlib import Path
 
 from llama_index.core import StorageContext, load_index_from_storage
 from manufacturing_ai_copilot.rag.embedding import configure_embedding
+from manufacturing_ai_copilot.rag.llm import generate_answer_with_qwen
 
 
 def load_retriever(storage_dir: Path, similarity_top_k: int = 3):
@@ -71,6 +72,7 @@ def query_index(storage_dir: Path, question: str, similarity_top_k: int = 3) -> 
 
 
 def build_retrieval_answer(matches: list[dict]) -> str:
+    # 在未接LLM的时候测试 /chat 接口
     if not matches:
         return "未在当前知识库中找到相关内容。"
 
@@ -94,8 +96,12 @@ def chat_with_retrieval(
         question=question,
         similarity_top_k=similarity_top_k,
     )
+    # answer = build_retrieval_answer(matches)
 
-    answer = build_retrieval_answer(matches)
+    answer = generate_answer_with_qwen(
+        question=question,
+        matches=matches,
+    )
 
     sources = []
     for match in matches:
