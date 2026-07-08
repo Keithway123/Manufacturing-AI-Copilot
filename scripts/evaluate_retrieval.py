@@ -64,6 +64,8 @@ def main() -> None:
         results.append(result)
 
     hit_count = sum(1 for result in results if result["hit"])
+    top1_count = sum(1 for result in results if result["rank"] == 1)
+    failed_results = [result for result in results if not result["hit"]]
     total_count = len(results)
 
     for result in results:
@@ -75,6 +77,16 @@ def main() -> None:
         )
 
     print(f"\nHit@{top_k}: {hit_count}/{total_count}")
+    print(f"Top1 Accuracy: {top1_count}/{total_count}")
+
+    if failed_results:
+        print("\nFailed case:")
+        for result in failed_results:
+            print(
+                f"- {result['id']}"
+                f"expected={result['expected_doc_id']} "
+                f"retrieved={result['retrieved_doc_ids']} "
+            )
 
 
 if __name__ == "__main__":
