@@ -86,18 +86,45 @@ def query_index(storage_dir: Path, question: str, similarity_top_k: int = 3) -> 
     return "\n".join(lines)
 
 
-def build_retrieval_answer(matches: list[dict]) -> str:
-    # 在未接LLM的时候测试 /chat 接口
-    if not matches:
-        return "未在当前知识库中找到相关内容。"
+# def build_retrieval_answer(matches: list[dict]) -> str:
+#     # 在未接LLM的时候测试 /chat 接口
+#     if not matches:
+#         return "未在当前知识库中找到相关内容。"
 
-    top_match = matches[0]
-    title = top_match.get("title") or "相关文档"
-    content = top_match.get("content") or ""
+#     top_match = matches[0]
+#     title = top_match.get("title") or "相关文档"
+#     content = top_match.get("content") or ""
 
-    preview = content[:600].strip()
+#     preview = content[:600].strip()
 
-    return f"根据《{title}》中的相关内容: \n\n{preview}"
+
+#     return f"根据《{title}》中的相关内容: \n\n{preview}"
+
+
+def build_sources(matches: list[dict]) -> list[dict]:
+    sources_by_doc_id = {}
+
+    for match in matches:
+        metadata = match.get("metadata", {})
+        doc_id = metadata.get("doc_id") or match.get("document")
+        score = match.get("score")
+
+        if doc_id not in sources_by_doc_id:
+            sources_by_doc_id[doc_id] = {
+                "title": match.get("title"),
+                "document": match.get("document"),
+                "score": score,
+            }
+            continue
+
+        current_score = sources_by_doc_id[doc_id]["score"]
+        if score is not None and (current_score is None or score > current_score):
+            sources_by_doc_id[doc_id] = {
+                "title": match.get("title"),
+                "document": match.get("document"),
+                "score": score,
+            }
+    return list(sources_by_doc_id.values())
 
 
 def chat_with_retrieval(
@@ -119,15 +146,7 @@ def chat_with_retrieval(
         matches=filtered_matches,
     )
 
-    sources = []
-    for match in filtered_matches:
-        sources.append(
-            {
-                "title": match.get("title"),
-                "document": match.get("document"),
-                "score": match.get("score"),
-            }
-        )
+    sources = build_sources(filtered_matches)
 
     return {
         "question": question,
