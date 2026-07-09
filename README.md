@@ -152,8 +152,61 @@ access_level: internal
 
 这些字段后续用于权限过滤、来源追踪和企业知识库管理。
 
+## Common Commands
+
+### Install dependencies
+
+```powershell
+uv sync
+```
+
+### Build local RAG index
+
+```powershell
+uv run --env-file .env python -m scripts.build_index
+```
+
+### Run FastAPI server
+
+```powershell
+uv run --env-file .env uvicorn manufacturing_ai_copilot.main:app --reload
+```
+
+### Run tests
+
+```powershell
+uv run pytest
+```
+
+当前测试结果：
+
+```text
+19 passed, 1 warning
+```
+
+### Run retrieval evaluation
+
+```powershell
+uv run --env-file .env python -m scripts.evaluate_retrieval
+```
+
+当前评估结果：
+
+```text
+Hit@3: 10/10
+Top1 Accuracy: 10/10
+No-answer Pass: 2/2
+```
+
 ## 当前状态
 
-项目记忆文档已初始化。
+V1 已完成本地 Markdown RAG 闭环：
+
+- FastAPI `/health`、`/search`、`/chat`
+- LlamaIndex 本地 `storage`
+- DashScope `text-embedding-v3`
+- Qwen 生成答案
+- Retriever 评估脚本
+- pytest 单元测试和 API 层测试
 
 创建日期：2026-07-04
