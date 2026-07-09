@@ -1,6 +1,9 @@
 from pathlib import Path
 from manufacturing_ai_copilot.rag.query_engine import retrieve_matches
-from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE
+from manufacturing_ai_copilot.core.config import (
+    DEFAULT_RETRIEVAL_TOP_K,
+    MIN_RETRIEVAL_SCORE,
+)
 from manufacturing_ai_copilot.rag.evaluation import (
     get_hit_rank,
     get_max_score,
@@ -61,7 +64,7 @@ def main() -> None:
     project_root = Path(__file__).resolve().parents[1]
     eval_path = project_root / "data" / "eval" / "questions.yaml"
     storage_dir = project_root / "storage"
-    top_k = 3
+    top_k = DEFAULT_RETRIEVAL_TOP_K
 
     questions = load_eval_questions(eval_path)
 

@@ -3,7 +3,13 @@ import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from manufacturing_ai_copilot.core.config import SERVICE_NAME, VERSION, STORAGE_DIR
+from manufacturing_ai_copilot.core.config import (
+    DEFAULT_RETRIEVAL_TOP_K,
+    MAX_RETRIEVAL_TOP_K,
+    SERVICE_NAME,
+    STORAGE_DIR,
+    VERSION,
+)
 from manufacturing_ai_copilot.rag.query_engine import (
     retrieve_matches,
     chat_with_retrieval,
@@ -17,7 +23,11 @@ app = FastAPI(title=SERVICE_NAME, version=VERSION)
 class SearchRequest(BaseModel):
     question: str = Field(..., min_length=1)
 
-    top_k: int = Field(default=3, ge=1, le=10)
+    top_k: int = Field(
+        default=DEFAULT_RETRIEVAL_TOP_K,
+        ge=1,
+        le=MAX_RETRIEVAL_TOP_K,
+    )
 
 
 class SearchMatch(BaseModel):
@@ -38,7 +48,11 @@ class SearchResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1)
-    top_k: int = Field(default=3, ge=1, le=10)
+    top_k: int = Field(
+        default=DEFAULT_RETRIEVAL_TOP_K,
+        ge=1,
+        le=MAX_RETRIEVAL_TOP_K,
+    )
 
 
 class ChatSource(BaseModel):

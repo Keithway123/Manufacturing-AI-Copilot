@@ -3,7 +3,11 @@ from pathlib import Path
 from llama_index.core import StorageContext, load_index_from_storage
 from manufacturing_ai_copilot.rag.embedding import configure_embedding
 from manufacturing_ai_copilot.rag.llm import generate_answer_with_qwen
-from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE, NO_ANSWER_MESSAGE
+from manufacturing_ai_copilot.core.config import (
+    DEFAULT_RETRIEVAL_TOP_K,
+    MIN_RETRIEVAL_SCORE,
+    NO_ANSWER_MESSAGE,
+)
 
 
 # 过滤低分的match
@@ -21,7 +25,10 @@ def filter_matches_by_score(
     return filtered_matches
 
 
-def load_retriever(storage_dir: Path, similarity_top_k: int = 3):
+def load_retriever(
+    storage_dir: Path,
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+):
     index_store_path = storage_dir / "index_store.json"
     if not index_store_path.exists():
         raise FileNotFoundError(
@@ -40,7 +47,7 @@ def load_retriever(storage_dir: Path, similarity_top_k: int = 3):
 def retrieve_matches(
     storage_dir: Path,
     question: str,
-    similarity_top_k: int = 3,
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
 ) -> list[dict]:
 
     retriever = load_retriever(
@@ -68,7 +75,11 @@ def retrieve_matches(
     return matches
 
 
-def query_index(storage_dir: Path, question: str, similarity_top_k: int = 3) -> str:
+def query_index(
+    storage_dir: Path,
+    question: str,
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+) -> str:
     matches = retrieve_matches(
         storage_dir=storage_dir,
         question=question,
@@ -133,7 +144,7 @@ def build_sources(matches: list[dict]) -> list[dict]:
 def chat_with_retrieval(
     storage_dir: Path,
     question: str,
-    similarity_top_k: int = 3,
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
 ) -> dict:
 
     matches = retrieve_matches(
