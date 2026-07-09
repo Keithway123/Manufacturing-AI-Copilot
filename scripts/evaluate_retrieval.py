@@ -1,31 +1,11 @@
-import yaml
-
 from pathlib import Path
 from manufacturing_ai_copilot.rag.query_engine import retrieve_matches
 from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE
-
-
-def get_max_score(matches: list[dict]) -> float | None:
-    scores = [match.get("score") for match in matches if match.get("score") is not None]
-
-    if not scores:
-        return None
-
-    return max(scores)
-
-
-def load_eval_questions(path: Path) -> list[dict]:
-    text = path.read_text(encoding="utf-8")
-    return yaml.safe_load(text) or []
-
-
-def get_hit_rank(matches: list[dict], expected_doc_id: str) -> int | None:
-    for index, match in enumerate(matches, start=1):
-        metadata = match.get("metadata", {})
-        if metadata.get("doc_id") == expected_doc_id:
-            return index
-
-    return None
+from manufacturing_ai_copilot.rag.evaluation import (
+    get_hit_rank,
+    get_max_score,
+    load_eval_questions,
+)
 
 
 def evaluate_question(

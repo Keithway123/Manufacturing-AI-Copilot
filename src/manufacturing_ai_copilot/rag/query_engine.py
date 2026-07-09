@@ -6,6 +6,7 @@ from manufacturing_ai_copilot.rag.llm import generate_answer_with_qwen
 from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE, NO_ANSWER_MESSAGE
 
 
+# 过滤低分的match
 def filter_matches_by_score(
     matches: list[dict],
     min_score: float = MIN_RETRIEVAL_SCORE,
@@ -101,7 +102,9 @@ def query_index(storage_dir: Path, question: str, similarity_top_k: int = 3) -> 
 #     return f"根据《{title}》中的相关内容: \n\n{preview}"
 
 
+# 按doc_id去重
 def build_sources(matches: list[dict]) -> list[dict]:
+
     sources_by_doc_id = {}
 
     for match in matches:
