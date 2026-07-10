@@ -22,6 +22,7 @@ app = FastAPI(title=SERVICE_NAME, version=VERSION)
 
 class SearchRequest(BaseModel):
     question: str = Field(..., min_length=1)
+    department: str | None = Field(default=None, min_length=1)
 
     top_k: int = Field(
         default=DEFAULT_RETRIEVAL_TOP_K,
@@ -48,6 +49,7 @@ class SearchResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1)
+    department: str | None = Field(default=None, min_length=1)
     top_k: int = Field(
         default=DEFAULT_RETRIEVAL_TOP_K,
         ge=1,
@@ -56,8 +58,11 @@ class ChatRequest(BaseModel):
 
 
 class ChatSource(BaseModel):
+    doc_id: str
     title: str | None
     document: str | None
+    department: str | None
+    version: str | None
     score: float | None
 
 
@@ -92,6 +97,7 @@ def search_documents(request: SearchRequest) -> SearchResponse:
             storage_dir=STORAGE_DIR,
             question=request.question,
             similarity_top_k=request.top_k,
+            department=request.department,
         )
     except FileNotFoundError as exc:
         # storage 不存在或索引没构建时，说明服务暂时不可用
@@ -118,6 +124,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             storage_dir=STORAGE_DIR,
             question=request.question,
             similarity_top_k=request.top_k,
+            department=request.department,
         )
 
     except FileNotFoundError as exc:

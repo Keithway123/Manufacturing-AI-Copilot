@@ -23,7 +23,13 @@ def test_health_check_returns_service_status():
 
 # /chat Test
 def test_chat_returns_response_from_rag_layer(monkeypatch):
-    def fake_chat_with_retrieval(storage_dir, question: str, similarity_top_k: int):
+    def fake_chat_with_retrieval(
+        storage_dir,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
+        assert department is None
         return {
             "question": question,
             "answer": "fake answer",
@@ -31,6 +37,9 @@ def test_chat_returns_response_from_rag_layer(monkeypatch):
                 {
                     "title": "SMT设备报警处理SOP",
                     "document": "SMT设备报警处理SOP.md",
+                    "doc_id": "smt_alarm_sop",
+                    "department": "生产部",
+                    "version": "v1.0",
                     "score": 0.9,
                 }
             ],
@@ -58,6 +67,9 @@ def test_chat_returns_response_from_rag_layer(monkeypatch):
         "answer": "fake answer",
         "sources": [
             {
+                "doc_id": "smt_alarm_sop",
+                "department": "生产部",
+                "version": "v1.0",
                 "title": "SMT设备报警处理SOP",
                 "document": "SMT设备报警处理SOP.md",
                 "score": 0.9,
@@ -73,7 +85,12 @@ def test_chat_returns_response_from_rag_layer(monkeypatch):
 
 
 def test_chat_returns_503_when_rag_index_is_missing(monkeypatch):
-    def fake_chat_with_retrieval(storage_dir, question: str, similarity_top_k: int):
+    def fake_chat_with_retrieval(
+        storage_dir,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
         raise FileNotFoundError("RAG index not found")
 
     monkeypatch.setattr(main, "chat_with_retrieval", fake_chat_with_retrieval)
@@ -91,7 +108,12 @@ def test_chat_returns_503_when_rag_index_is_missing(monkeypatch):
 
 
 def test_chat_returns_500_when_rag_layer_fails(monkeypatch):
-    def fake_chat_with_retrieval(storage_dir, question: str, similarity_top_k: int):
+    def fake_chat_with_retrieval(
+        storage_dir,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
         raise RuntimeError("unexpected error")
 
     monkeypatch.setattr(main, "chat_with_retrieval", fake_chat_with_retrieval)
@@ -125,7 +147,13 @@ def test_chat_rejects_empty_question():
 # /search Test
 def test_search_returns_matches_from_rag_layer(monkeypatch):
     # /search 是调试接口，只返回原始召回结果，不生成 answer。
-    def fake_retrieve_matches(storage_dir, question: str, similarity_top_k: int):
+    def fake_retrieve_matches(
+        storage_dir,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
+        assert department is None
         return [
             {
                 "score": 0.9,
@@ -169,7 +197,12 @@ def test_search_returns_matches_from_rag_layer(monkeypatch):
 
 
 def test_search_returns_503_when_rag_index_is_missing(monkeypatch):
-    def fake_retrieve_matches(storage_dir, question: str, similarity_top_k: int):
+    def fake_retrieve_matches(
+        storage_dir,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
         raise FileNotFoundError("RAG index not found")
 
     monkeypatch.setattr(main, "retrieve_matches", fake_retrieve_matches)
@@ -187,7 +220,12 @@ def test_search_returns_503_when_rag_index_is_missing(monkeypatch):
 
 
 def test_search_returns_500_when_rag_layer_fails(monkeypatch):
-    def fake_retrieve_matches(storage_dir, question: str, similarity_top_k: int):
+    def fake_retrieve_matches(
+        storage_dir,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
         raise RuntimeError("unexpected error")
 
     monkeypatch.setattr(main, "retrieve_matches", fake_retrieve_matches)

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from llama_index.core import StorageContext, load_index_from_storage
+from llama_index.core.vector_stores import MetadataFilter, MetadataFilters
 from manufacturing_ai_copilot.rag.embedding import configure_embedding
 from manufacturing_ai_copilot.rag.llm import generate_answer_with_qwen
 from manufacturing_ai_copilot.core.config import (
@@ -25,9 +26,24 @@ def filter_matches_by_score(
     return filtered_matches
 
 
+def build_metadata_filters(department: str | None) -> MetadataFilters | None:
+    if department is None:
+        return None
+
+    return MetadataFilters(
+        filters=[
+            MetadataFilter(
+                key="department",
+                value=department,
+            )
+        ]
+    )
+
+
 def load_retriever(
     storage_dir: Path,
     similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+    department: str | None = None,
 ):
     index_store_path = storage_dir / "index_store.json"
     if not index_store_path.exists():
@@ -41,18 +57,23 @@ def load_retriever(
 
     index = load_index_from_storage(storage_context)
 
-    return index.as_retriever(similarity_top_k=similarity_top_k)
+    return index.as_retriever(
+        similarity_top_k=similarity_top_k,
+        filters=build_metadata_filters(department),
+    )
 
 
 def retrieve_matches(
     storage_dir: Path,
     question: str,
     similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+    department: str | None = None,
 ) -> list[dict]:
 
     retriever = load_retriever(
         storage_dir=storage_dir,
         similarity_top_k=similarity_top_k,
+        department=department,
     )
 
     nodes = retriever.retrieve(question)
@@ -113,6 +134,19 @@ def query_index(
 #     return f"根据《{title}》中的相关内容: \n\n{preview}"
 
 
+def build_source(match: dict, doc_id: str) -> dict:
+    metadata = match.get("metadata", {})
+
+    return {
+        "doc_id": doc_id,
+        "title": match.get("title"),
+        "document": match.get("document"),
+        "department": metadata.get("department"),
+        "version": metadata.get("version"),
+        "score": match.get("score"),
+    }
+
+
 # 按doc_id去重
 def build_sources(matches: list[dict]) -> list[dict]:
 
@@ -124,20 +158,12 @@ def build_sources(matches: list[dict]) -> list[dict]:
         score = match.get("score")
 
         if doc_id not in sources_by_doc_id:
-            sources_by_doc_id[doc_id] = {
-                "title": match.get("title"),
-                "document": match.get("document"),
-                "score": score,
-            }
+            sources_by_doc_id[doc_id] = build_source(match, doc_id)
             continue
 
         current_score = sources_by_doc_id[doc_id]["score"]
         if score is not None and (current_score is None or score > current_score):
-            sources_by_doc_id[doc_id] = {
-                "title": match.get("title"),
-                "document": match.get("document"),
-                "score": score,
-            }
+            sources_by_doc_id[doc_id] = build_source(match, doc_id)
     return list(sources_by_doc_id.values())
 
 
@@ -145,12 +171,14 @@ def chat_with_retrieval(
     storage_dir: Path,
     question: str,
     similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+    department: str | None = None,
 ) -> dict:
 
     matches = retrieve_matches(
         storage_dir=storage_dir,
         question=question,
         similarity_top_k=similarity_top_k,
+        department=department,
     )
     # answer = build_retrieval_answer(matches)
     filtered_matches = filter_matches_by_score(matches)

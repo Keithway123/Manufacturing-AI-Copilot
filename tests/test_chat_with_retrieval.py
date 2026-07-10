@@ -20,7 +20,13 @@ def test_chat_with_retrieval_returns_no_answer_without_calling_qwen(monkeypatch)
         }
     ]
 
-    def fake_retrieve_matches(storage_dir: Path, question: str, similarity_top_k: int):
+    def fake_retrieve_matches(
+        storage_dir: Path,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
+        assert department is None
         return low_score_matches
 
     def fail_if_qwen_is_called(question: str, matches: list[dict]):
@@ -56,18 +62,32 @@ def test_chat_with_retrieval_calls_qwen_and_returns_sources(monkeypatch):
             "title": "SMT设备报警处理SOP",
             "document": "SMT设备报警处理SOP.md",
             "content": "E203 处理步骤",
-            "metadata": {"doc_id": "smt_alarm_sop"},
+            "metadata": {
+                "doc_id": "smt_alarm_sop",
+                "department": "生产部",
+                "version": "v1.0",
+            },
         },
         {
             "score": 0.8,
             "title": "SMT设备报警处理SOP",
             "document": "SMT设备报警处理SOP.md",
             "content": "E203 注意事项",
-            "metadata": {"doc_id": "smt_alarm_sop"},
+            "metadata": {
+                "doc_id": "smt_alarm_sop",
+                "department": "生产部",
+                "version": "v1.0",
+            },
         },
     ]
 
-    def fake_retrieve_matches(storage_dir: Path, question: str, similarity_top_k: int):
+    def fake_retrieve_matches(
+        storage_dir: Path,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
+        assert department == "生产部"
         return high_score_matches
 
     def fake_generate_answer_with_qwen(question: str, matches: list[dict]):
@@ -85,6 +105,7 @@ def test_chat_with_retrieval_calls_qwen_and_returns_sources(monkeypatch):
         storage_dir=Path("fake-storage"),
         question="贴片机报警E203怎么处理？",
         similarity_top_k=3,
+        department="生产部",
     )
 
     assert result["answer"] == "fake answer"
@@ -92,6 +113,9 @@ def test_chat_with_retrieval_calls_qwen_and_returns_sources(monkeypatch):
         {
             "title": "SMT设备报警处理SOP",
             "document": "SMT设备报警处理SOP.md",
+            "doc_id": "smt_alarm_sop",
+            "department": "生产部",
+            "version": "v1.0",
             "score": 0.9,
         }
     ]
