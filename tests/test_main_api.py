@@ -23,10 +23,10 @@ def test_health_check_returns_service_status():
 
 # /chat Test
 def test_chat_returns_response_from_rag_layer(monkeypatch):
-    def fake_chat_with_retrieval(
+    def fake_run_agent(
         storage_dir,
         question: str,
-        similarity_top_k: int,
+        top_k: int,
         department: str | None,
     ):
         assert department is None
@@ -44,14 +44,14 @@ def test_chat_returns_response_from_rag_layer(monkeypatch):
                 }
             ],
             "retrieval": {
-                "top_k": similarity_top_k,
+                "top_k": top_k,
                 "min_score": MIN_RETRIEVAL_SCORE,
                 "retrieved_count": 2,
                 "used_count": 1,
             },
         }
 
-    monkeypatch.setattr(main, "chat_with_retrieval", fake_chat_with_retrieval)
+    monkeypatch.setattr(main, "run_agent", fake_run_agent)
 
     response = client.post(
         "/chat",
@@ -85,15 +85,15 @@ def test_chat_returns_response_from_rag_layer(monkeypatch):
 
 
 def test_chat_returns_503_when_rag_index_is_missing(monkeypatch):
-    def fake_chat_with_retrieval(
+    def fake_run_agent(
         storage_dir,
         question: str,
-        similarity_top_k: int,
+        top_k: int,
         department: str | None,
     ):
         raise FileNotFoundError("RAG index not found")
 
-    monkeypatch.setattr(main, "chat_with_retrieval", fake_chat_with_retrieval)
+    monkeypatch.setattr(main, "run_agent", fake_run_agent)
 
     response = client.post(
         "/chat",
@@ -108,15 +108,15 @@ def test_chat_returns_503_when_rag_index_is_missing(monkeypatch):
 
 
 def test_chat_returns_500_when_rag_layer_fails(monkeypatch):
-    def fake_chat_with_retrieval(
+    def fake_run_agent(
         storage_dir,
         question: str,
-        similarity_top_k: int,
+        top_k: int,
         department: str | None,
     ):
         raise RuntimeError("unexpected error")
 
-    monkeypatch.setattr(main, "chat_with_retrieval", fake_chat_with_retrieval)
+    monkeypatch.setattr(main, "run_agent", fake_run_agent)
 
     response = client.post(
         "/chat",

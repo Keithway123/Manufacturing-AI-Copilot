@@ -10,10 +10,8 @@ from manufacturing_ai_copilot.core.config import (
     STORAGE_DIR,
     VERSION,
 )
-from manufacturing_ai_copilot.rag.query_engine import (
-    retrieve_matches,
-    chat_with_retrieval,
-)
+from manufacturing_ai_copilot.rag.query_engine import retrieve_matches
+from manufacturing_ai_copilot.agent.graph import run_agent
 
 logger = logging.getLogger(__name__)
 
@@ -120,10 +118,10 @@ def search_documents(request: SearchRequest) -> SearchResponse:
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     try:
-        result = chat_with_retrieval(
+        result = run_agent(
             storage_dir=STORAGE_DIR,
             question=request.question,
-            similarity_top_k=request.top_k,
+            top_k=request.top_k,
             department=request.department,
         )
 
