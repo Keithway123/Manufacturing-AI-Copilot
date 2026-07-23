@@ -52,3 +52,34 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
     assert result["answer"] == "fake answer"
     assert result["sources"][0]["doc_id"] == "smt_alarm_sop"
     assert result["retrieval"]["used_count"] == 1
+    assert result["question_type"] == graph.KNOWLEDGE_QA
+
+
+def test_run_agent_classifies_unknown_question(monkeypatch):
+    def fake_chat_with_retrieval(
+        storage_dir: Path,
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ) -> dict:
+        return {
+            "question": question,
+            "answer": "fake answer",
+            "sources": [],
+            "retrieval": {},
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "chat_with_retrieval",
+        fake_chat_with_retrieval,
+    )
+
+    result = graph.run_agent(
+        question="今天天气怎么样？",
+        storage_dir=Path("fake-storage"),
+        top_k=3,
+        department=None,
+    )
+
+    assert result["question_type"] == graph.UNKNOWN

@@ -5,6 +5,24 @@ from langgraph.graph import END, START, StateGraph
 
 from manufacturing_ai_copilot.rag.query_engine import chat_with_retrieval
 
+KNOWLEDGE_QA = "knowledge_qa"
+UNKNOWN = "unknown"
+KNOWLEDGE_QA_KEYWORDS = (
+    "报警",
+    "处理",
+    "SOP",
+    "点检",
+    "工单",
+    "MES",
+    "8D",
+    "质量",
+    "VPN",
+    "密码",
+    "注塑",
+    "贴片机",
+    "设备",
+)
+
 
 # 定义流程数据
 class AgentState(TypedDict):
@@ -14,6 +32,8 @@ class AgentState(TypedDict):
     department: str | None
     storage_dir: Path
 
+    question_type: str
+
     # 输出：节点执行后写回State
     answer: str
     sources: list[dict[str, Any]]
@@ -21,6 +41,20 @@ class AgentState(TypedDict):
 
 
 # 定义节点处理逻辑
+def classify_question_node(state: AgentState) -> dict:
+    question = state["question"]
+
+    question_type = UNKNOWN
+    for keyword in KNOWLEDGE_QA_KEYWORDS:
+        if keyword.lower() in question.lower():
+            question_type = KNOWLEDGE_QA
+            break
+
+    return {
+        "question_type": question_type,
+    }
+
+
 def rag_answer_node(state: AgentState) -> dict:
     result = chat_with_retrieval(
         storage_dir=state["storage_dir"],
@@ -39,8 +73,11 @@ def rag_answer_node(state: AgentState) -> dict:
 def build_graph():
     graph_builder = StateGraph(AgentState)
 
+    graph_builder.add_node("classify_question", classify_question_node)
     graph_builder.add_node("rag_answer", rag_answer_node)
-    graph_builder.add_edge(START, "rag_answer")
+
+    graph_builder.add_edge(START, "classify_question")
+    graph_builder.add_edge("classify_question", "rag_answer")
     graph_builder.add_edge("rag_answer", END)
 
     return graph_builder.compile()
@@ -59,6 +96,7 @@ def run_agent(
         "top_k": top_k,
         "department": department,
         "storage_dir": storage_dir,
+        "question_type": UNKNOWN,
         "answer": "",
         "sources": [],
         "retrieval": {},
