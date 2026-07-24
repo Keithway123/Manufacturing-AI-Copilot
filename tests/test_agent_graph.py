@@ -1,6 +1,7 @@
 # 只测 Agent Graph 是否把 State 正确传给 RAG 层，并把结果写回 State
 from pathlib import Path
 from manufacturing_ai_copilot.agent import graph
+from manufacturing_ai_copilot.core.config import NO_ANSWER_MESSAGE
 
 
 def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
@@ -55,31 +56,20 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
     assert result["question_type"] == graph.KNOWLEDGE_QA
 
 
-def test_run_agent_classifies_unknown_question(monkeypatch):
-    def fake_chat_with_retrieval(
-        storage_dir: Path,
-        question: str,
-        similarity_top_k: int,
-        department: str | None,
-    ) -> dict:
-        return {
-            "question": question,
-            "answer": "fake answer",
-            "sources": [],
-            "retrieval": {},
-        }
+def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
+    def fake_chat_with_retrieval(**kwargs):
+        raise AssertionError("unknow question should not call RAG")
 
-    monkeypatch.setattr(
-        graph,
-        "chat_with_retrieval",
-        fake_chat_with_retrieval,
-    )
+    monkeypatch.setattr(graph, "chat_with_retrieval", fake_chat_with_retrieval)
 
     result = graph.run_agent(
-        question="今天天气怎么样？",
-        storage_dir=Path("fake-storage"),
+        question="今天天气如何",
+        storage_dir=Path("storage"),
         top_k=3,
-        department=None,
     )
 
     assert result["question_type"] == graph.UNKNOWN
+    assert result["answer"] == NO_ANSWER_MESSAGE
+    assert result["sources"] == []
+    assert result["retrieval"]["retrieved_count"] == 0
+    assert result["retrieval"]["used_count"] == 0

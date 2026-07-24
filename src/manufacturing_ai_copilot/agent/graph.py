@@ -3,6 +3,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE, NO_ANSWER_MESSAGE
 from manufacturing_ai_copilot.rag.query_engine import chat_with_retrieval
 
 KNOWLEDGE_QA = "knowledge_qa"
@@ -70,15 +71,44 @@ def rag_answer_node(state: AgentState) -> dict:
     }
 
 
+def fallback_node(state: AgentState) -> dict:
+    return {
+        "answer": NO_ANSWER_MESSAGE,
+        "sources": [],
+        "retrieval": {
+            "top_k": state["top_k"],
+            "min_score": MIN_RETRIEVAL_SCORE,
+            "retrieved_count": 0,
+            "used_count": 0,
+        },
+    }
+
+
+def route_by_question_type(state: AgentState) -> str:
+    if state["question_type"] == KNOWLEDGE_QA:
+        return "rag_answer"
+    return "fallback"
+
+
 def build_graph():
     graph_builder = StateGraph(AgentState)
 
     graph_builder.add_node("classify_question", classify_question_node)
     graph_builder.add_node("rag_answer", rag_answer_node)
+    graph_builder.add_node("fallback", fallback_node)
 
     graph_builder.add_edge(START, "classify_question")
-    graph_builder.add_edge("classify_question", "rag_answer")
+    graph_builder.add_conditional_edges(
+        "classify_question",
+        route_by_question_type,
+        {
+            "rag_answer": "rag_answer",
+            "fallback": "fallback",
+        },
+    )
+
     graph_builder.add_edge("rag_answer", END)
+    graph_builder.add_edge("fallback", END)
 
     return graph_builder.compile()
 
