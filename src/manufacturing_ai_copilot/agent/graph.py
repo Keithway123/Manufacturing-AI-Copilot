@@ -24,6 +24,46 @@ KNOWLEDGE_QA_KEYWORDS = (
     "设备",
 )
 
+EQUIPMENT_SOP = "equipment_sop"
+PRODUCTION_ORDER = "production_order"
+QUALITY_ISSUE = "quality_issue"
+IT_SUPPORT = "it_support"
+GENERAL_KNOWLEDGE = "general_knowledge"
+UNKNOWN_DOMAIN = "unknown"
+
+# 每个业务域独立维护关键词，避免和“是否进入知识库问答”的判断混在一起
+DOMAIN_KEYWORDS = {
+    EQUIPMENT_SOP: (
+        "报警",
+        "SOP",
+        "点检",
+        "注塑",
+        "贴片机",
+        "设备",
+        "吸嘴",
+    ),
+    PRODUCTION_ORDER: (
+        "MES",
+        "工单",
+        "生产状态",
+        "暂停",
+        "完成",
+    ),
+    QUALITY_ISSUE: (
+        "质量",
+        "8D",
+        "根因",
+        "D3",
+        "异常",
+    ),
+    IT_SUPPORT: (
+        "VPN",
+        "密码",
+        "账号",
+        "IT",
+    ),
+}
+
 
 # 定义流程数据
 class AgentState(TypedDict):
@@ -35,6 +75,9 @@ class AgentState(TypedDict):
 
     question_type: str
     route: str
+
+    # 内部业务域分类，用于调试和后续多 Agent 拆分
+    domain_type: str
 
     # 输出：节点执行后写回State
     answer: str
@@ -48,15 +91,29 @@ def classify_question_node(state: AgentState) -> dict:
 
     question_type = UNKNOWN
     route = "fallback"
+    domain_type = UNKNOWN_DOMAIN
+
     for keyword in KNOWLEDGE_QA_KEYWORDS:
         if keyword.lower() in question.lower():
             question_type = KNOWLEDGE_QA
             route = "rag_answer"
+            domain_type = GENERAL_KNOWLEDGE
             break
+
+    if question_type == KNOWLEDGE_QA:
+        for domain, keywords in DOMAIN_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword.lower() in question.lower():
+                    domain_type = domain
+                    break
+
+            if domain_type == domain:
+                break
 
     return {
         "question_type": question_type,
         "route": route,
+        "domain_type": domain_type,
     }
 
 
@@ -129,10 +186,11 @@ def run_agent(
         "department": department,
         "storage_dir": storage_dir,
         "question_type": UNKNOWN,
+        "route": "",
+        "domain_type": UNKNOWN_DOMAIN,
         "answer": "",
         "sources": [],
         "retrieval": {},
-        "route": "",
     }
 
     return graph.invoke(initial_state)

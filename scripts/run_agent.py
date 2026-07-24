@@ -21,7 +21,7 @@ def main() -> None:
         department=args.department,
     )
     print(f"Question Type: {result['question_type']}")
-
+    print(f"Domain Type: {result['domain_type']}")
     print(f"Route: {result['route']}")
     print()
 
@@ -33,7 +33,7 @@ def main() -> None:
         for source in result["sources"]:
             print(
                 f"- {source.get('title')}"
-                f"({source.get('document')}),"
+                f"({source.get('document')}), "
                 f"score={source.get('score')}"
             )
     else:

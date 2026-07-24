@@ -75,3 +75,53 @@ def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
     assert result["sources"] == []
     assert result["retrieval"]["retrieved_count"] == 0
     assert result["retrieval"]["used_count"] == 0
+
+
+def test_classify_question_node_sets_domain_type():
+    cases = [
+        ("贴片机报警 E203 怎么处理", graph.EQUIPMENT_SOP),
+        ("MES工单暂停后怎么恢复？", graph.PRODUCTION_ORDER),
+        ("质量8D的根因分析怎么写？", graph.QUALITY_ISSUE),
+        ("VPN密码忘记了怎么办？", graph.IT_SUPPORT),
+    ]
+
+    for question, expected_domain_type in cases:
+        result = graph.classify_question_node(
+            {
+                "question": question,
+                "top_k": 3,
+                "department": None,
+                "storage_dir": Path("storage"),
+                "question_type": graph.UNKNOWN,
+                "route": "",
+                "domain_type": graph.UNKNOWN_DOMAIN,
+                "answer": "",
+                "sources": [],
+                "retrieval": {},
+            }
+        )
+
+    assert result["question_type"] == graph.KNOWLEDGE_QA
+    assert result["route"] == "rag_answer"
+    assert result["domain_type"] == expected_domain_type
+
+
+def test_classify_question_node_sets_unknown_domain_for_unknown_question():
+    result = graph.classify_question_node(
+        {
+            "question": "今天天气如何？",
+            "top_k": 3,
+            "department": None,
+            "storage_dir": Path("storage"),
+            "question_type": graph.UNKNOWN,
+            "route": "",
+            "domain_type": graph.UNKNOWN_DOMAIN,
+            "answer": "",
+            "sources": [],
+            "retrieval": {},
+        }
+    )
+
+    assert result["question_type"] == graph.UNKNOWN
+    assert result["route"] == "fallback"
+    assert result["domain_type"] == graph.UNKNOWN_DOMAIN

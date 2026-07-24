@@ -64,6 +64,8 @@ def test_chat_returns_response_from_rag_layer(monkeypatch):
     assert response.status_code == 200
 
     data = response.json()
+    assert "question_type" not in data
+    assert "domain_type" not in data
     assert "route" not in data
 
     assert data == {
