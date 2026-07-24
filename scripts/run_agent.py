@@ -20,16 +20,24 @@ def main() -> None:
         top_k=args.top_k,
         department=args.department,
     )
+    print(f"Question Type: {result['question_type']}")
+
+    print(f"Route: {result['route']}")
+    print()
 
     print(result["answer"])
     print()
+
     print("Sources:")
-    for source in result["sources"]:
-        print(
-            f"- {source.get('title')}"
-            f"({source.get('document')})"
-            f"score={source.get('score')}"
-        )
+    if result["sources"]:
+        for source in result["sources"]:
+            print(
+                f"- {source.get('title')}"
+                f"({source.get('document')}),"
+                f"score={source.get('score')}"
+            )
+    else:
+        print("(none)")
 
 
 if __name__ == "__main__":

@@ -54,11 +54,12 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
     assert result["sources"][0]["doc_id"] == "smt_alarm_sop"
     assert result["retrieval"]["used_count"] == 1
     assert result["question_type"] == graph.KNOWLEDGE_QA
+    assert result["route"] == "rag_answer"
 
 
 def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
     def fake_chat_with_retrieval(**kwargs):
-        raise AssertionError("unknow question should not call RAG")
+        raise AssertionError("unknown question should not call RAG")
 
     monkeypatch.setattr(graph, "chat_with_retrieval", fake_chat_with_retrieval)
 
@@ -69,6 +70,7 @@ def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
     )
 
     assert result["question_type"] == graph.UNKNOWN
+    assert result["route"] == "fallback"
     assert result["answer"] == NO_ANSWER_MESSAGE
     assert result["sources"] == []
     assert result["retrieval"]["retrieved_count"] == 0

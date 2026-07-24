@@ -34,6 +34,7 @@ class AgentState(TypedDict):
     storage_dir: Path
 
     question_type: str
+    route: str
 
     # 输出：节点执行后写回State
     answer: str
@@ -46,13 +47,16 @@ def classify_question_node(state: AgentState) -> dict:
     question = state["question"]
 
     question_type = UNKNOWN
+    route = "fallback"
     for keyword in KNOWLEDGE_QA_KEYWORDS:
         if keyword.lower() in question.lower():
             question_type = KNOWLEDGE_QA
+            route = "rag_answer"
             break
 
     return {
         "question_type": question_type,
+        "route": route,
     }
 
 
@@ -85,9 +89,7 @@ def fallback_node(state: AgentState) -> dict:
 
 
 def route_by_question_type(state: AgentState) -> str:
-    if state["question_type"] == KNOWLEDGE_QA:
-        return "rag_answer"
-    return "fallback"
+    return state["route"]
 
 
 def build_graph():
@@ -130,6 +132,7 @@ def run_agent(
         "answer": "",
         "sources": [],
         "retrieval": {},
+        "route": "",
     }
 
     return graph.invoke(initial_state)
