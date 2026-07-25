@@ -6,6 +6,8 @@ from langgraph.graph import END, START, StateGraph
 from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE, NO_ANSWER_MESSAGE
 from manufacturing_ai_copilot.rag.query_engine import chat_with_retrieval
 from manufacturing_ai_copilot.agent.classifier import (
+    ROUTE_RAG_ANSWER,
+    ROUTE_FALLBACK,
     UNKNOWN,
     UNKNOWN_DOMAIN,
     classify_question,
@@ -82,8 +84,8 @@ def build_graph():
         "classify_question",
         route_by_question_type,
         {
-            "rag_answer": "rag_answer",
-            "fallback": "fallback",
+            ROUTE_RAG_ANSWER: "rag_answer",
+            ROUTE_FALLBACK: "fallback",
         },
     )
 

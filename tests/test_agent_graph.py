@@ -57,7 +57,7 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
     assert result["sources"][0]["doc_id"] == "smt_alarm_sop"
     assert result["retrieval"]["used_count"] == 1
     assert result["question_type"] == classifier.KNOWLEDGE_QA
-    assert result["route"] == "rag_answer"
+    assert result["route"] == classifier.ROUTE_RAG_ANSWER
 
 
 def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
@@ -73,7 +73,7 @@ def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
     )
 
     assert result["question_type"] == classifier.UNKNOWN
-    assert result["route"] == "fallback"
+    assert result["route"] == classifier.ROUTE_FALLBACK
     assert result["answer"] == NO_ANSWER_MESSAGE
     assert result["sources"] == []
     assert result["retrieval"]["retrieved_count"] == 0

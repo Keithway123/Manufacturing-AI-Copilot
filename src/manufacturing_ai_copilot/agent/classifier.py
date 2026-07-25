@@ -59,6 +59,9 @@ DOMAIN_KEYWORDS = {
     ),
 }
 
+ROUTE_RAG_ANSWER = "rag_answer"
+ROUTE_FALLBACK = "fallback"
+
 
 class ClassificationResult(TypedDict):
     question_type: str
@@ -68,13 +71,13 @@ class ClassificationResult(TypedDict):
 
 def classify_question(question: str) -> ClassificationResult:
     question_type = UNKNOWN
-    route = "fallback"
+    route = ROUTE_FALLBACK
     domain_type = UNKNOWN_DOMAIN
 
     for keyword in KNOWLEDGE_QA_KEYWORDS:
         if keyword.lower() in question.lower():
             question_type = KNOWLEDGE_QA
-            route = "rag_answer"
+            route = ROUTE_RAG_ANSWER
             domain_type = GENERAL_KNOWLEDGE
             break
 
