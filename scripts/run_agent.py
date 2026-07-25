@@ -34,7 +34,7 @@ def main() -> None:
     if result["sources"]:
         for source in result["sources"]:
             print(
-                f"- {source.get('title')}"
+                f"- {source.get('title')} "
                 f"({source.get('document')}), "
                 f"score={source.get('score')}"
             )

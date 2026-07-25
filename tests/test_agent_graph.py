@@ -2,6 +2,7 @@
 from pathlib import Path
 from manufacturing_ai_copilot.agent import graph
 from manufacturing_ai_copilot.core.config import NO_ANSWER_MESSAGE
+from manufacturing_ai_copilot.agent import classifier
 
 
 def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
@@ -16,7 +17,7 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
         assert question == "贴片机报警 E203 怎么处理？"
         assert similarity_top_k == 3
         assert department == "生产部"
-        assert domain_type == graph.EQUIPMENT_SOP
+        assert domain_type == classifier.EQUIPMENT_SOP
 
         return {
             "question": question,
@@ -55,7 +56,7 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
     assert result["answer"] == "fake answer"
     assert result["sources"][0]["doc_id"] == "smt_alarm_sop"
     assert result["retrieval"]["used_count"] == 1
-    assert result["question_type"] == graph.KNOWLEDGE_QA
+    assert result["question_type"] == classifier.KNOWLEDGE_QA
     assert result["route"] == "rag_answer"
 
 
@@ -71,58 +72,9 @@ def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
         top_k=3,
     )
 
-    assert result["question_type"] == graph.UNKNOWN
+    assert result["question_type"] == classifier.UNKNOWN
     assert result["route"] == "fallback"
     assert result["answer"] == NO_ANSWER_MESSAGE
     assert result["sources"] == []
     assert result["retrieval"]["retrieved_count"] == 0
     assert result["retrieval"]["used_count"] == 0
-
-
-def test_classify_question_node_sets_domain_type():
-    cases = [
-        ("贴片机报警 E203 怎么处理", graph.EQUIPMENT_SOP),
-        ("MES工单暂停后怎么恢复？", graph.PRODUCTION_ORDER),
-        ("质量8D的根因分析怎么写？", graph.QUALITY_ISSUE),
-        ("VPN密码忘记了怎么办？", graph.IT_SUPPORT),
-    ]
-
-    for question, expected_domain_type in cases:
-        result = graph.classify_question_node(
-            {
-                "question": question,
-                "top_k": 3,
-                "department": None,
-                "storage_dir": Path("storage"),
-                "question_type": graph.UNKNOWN,
-                "route": "",
-                "domain_type": graph.UNKNOWN_DOMAIN,
-                "answer": "",
-                "sources": [],
-                "retrieval": {},
-            }
-        )
-        assert result["question_type"] == graph.KNOWLEDGE_QA
-        assert result["route"] == "rag_answer"
-        assert result["domain_type"] == expected_domain_type
-
-
-def test_classify_question_node_sets_unknown_domain_for_unknown_question():
-    result = graph.classify_question_node(
-        {
-            "question": "今天天气如何？",
-            "top_k": 3,
-            "department": None,
-            "storage_dir": Path("storage"),
-            "question_type": graph.UNKNOWN,
-            "route": "",
-            "domain_type": graph.UNKNOWN_DOMAIN,
-            "answer": "",
-            "sources": [],
-            "retrieval": {},
-        }
-    )
-
-    assert result["question_type"] == graph.UNKNOWN
-    assert result["route"] == "fallback"
-    assert result["domain_type"] == graph.UNKNOWN_DOMAIN
