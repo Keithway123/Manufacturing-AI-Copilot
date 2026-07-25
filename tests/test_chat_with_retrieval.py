@@ -29,7 +29,7 @@ def test_chat_with_retrieval_returns_no_answer_without_calling_qwen(monkeypatch)
         assert department is None
         return low_score_matches
 
-    def fail_if_qwen_is_called(question: str, matches: list[dict]):
+    def fail_if_qwen_is_called(question: str, matches: list[dict], domain_type: str):
         raise AssertionError("Qwen should not be called for no-answer branch.")
 
     monkeypatch.setattr(query_engine, "retrieve_matches", fake_retrieve_matches)
@@ -90,8 +90,9 @@ def test_chat_with_retrieval_calls_qwen_and_returns_sources(monkeypatch):
         assert department == "生产部"
         return high_score_matches
 
-    def fake_generate_answer_with_qwen(question: str, matches: list[dict]):
+    def fake_generate_answer_with_qwen(question: str, matches: list[dict], domain_type):
         assert matches == high_score_matches
+        assert domain_type == "general_knowledge"
         return "fake answer"
 
     monkeypatch.setattr(query_engine, "retrieve_matches", fake_retrieve_matches)

@@ -123,6 +123,7 @@ def rag_answer_node(state: AgentState) -> dict:
         question=state["question"],
         similarity_top_k=state["top_k"],
         department=state["department"],
+        domain_type=state["domain_type"],
     )
 
     return {

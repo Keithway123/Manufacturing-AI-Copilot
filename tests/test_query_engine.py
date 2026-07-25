@@ -3,6 +3,8 @@ from manufacturing_ai_copilot.rag.query_engine import (
     build_sources,
     filter_matches_by_score,
 )
+from pathlib import Path
+from manufacturing_ai_copilot.rag import query_engine
 
 
 def test_build_metadata_filters_returns_none_without_department():
@@ -91,3 +93,51 @@ def test_build_sources_deduplicatest_by_doc_id_and_keeps_highest_score():
             "score": 0.8,
         },
     ]
+
+
+def test_chat_with_retrieval_passes_domain_type_to_llm(monkeypatch):
+    def fake_retrieve_matches(
+        storage_dir,
+        question,
+        similarity_top_k,
+        department,
+    ):
+        return [
+            {
+                "score": 0.9,
+                "document": "SMT设备报警处理SOP.md",
+                "title": "SMT设备报警处理SOP",
+                "content": "E203 处理步骤",
+                "metadata": {
+                    "doc_id": "smt_alarm_sop",
+                    "department": "生产部",
+                    "version": "v1.0",
+                },
+            }
+        ]
+
+    def fake_generate_answer_with_qwen(
+        question,
+        matches,
+        domain_type,
+    ):
+        assert domain_type == "equipment_sop"
+        return "fake answer"
+
+    monkeypatch.setattr(query_engine, "retrieve_matches", fake_retrieve_matches)
+    monkeypatch.setattr(
+        query_engine,
+        "generate_answer_with_qwen",
+        fake_generate_answer_with_qwen,
+    )
+
+    result = query_engine.chat_with_retrieval(
+        storage_dir=Path("storage"),
+        question="贴片机报警 E203 怎么处理？",
+        similarity_top_k=3,
+        department=None,
+        domain_type="equipment_sop",
+    )
+
+    assert result["answer"] == "fake answer"
+    assert result["sources"][0]["doc_id"] == "smt_alarm_sop"

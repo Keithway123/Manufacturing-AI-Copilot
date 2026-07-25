@@ -10,11 +10,13 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
         question: str,
         similarity_top_k: int,
         department: str | None,
+        domain_type: str,
     ) -> dict:
         assert storage_dir == Path("fake-storage")
         assert question == "贴片机报警 E203 怎么处理？"
         assert similarity_top_k == 3
         assert department == "生产部"
+        assert domain_type == graph.EQUIPMENT_SOP
 
         return {
             "question": question,
@@ -100,10 +102,9 @@ def test_classify_question_node_sets_domain_type():
                 "retrieval": {},
             }
         )
-
-    assert result["question_type"] == graph.KNOWLEDGE_QA
-    assert result["route"] == "rag_answer"
-    assert result["domain_type"] == expected_domain_type
+        assert result["question_type"] == graph.KNOWLEDGE_QA
+        assert result["route"] == "rag_answer"
+        assert result["domain_type"] == expected_domain_type
 
 
 def test_classify_question_node_sets_unknown_domain_for_unknown_question():

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from manufacturing_ai_copilot.agent.graph import run_agent
 from manufacturing_ai_copilot.core.config import DEFAULT_RETRIEVAL_TOP_K, STORAGE_DIR
+from manufacturing_ai_copilot.rag.llm import get_answer_instruction
 
 
 def main() -> None:
@@ -23,6 +24,7 @@ def main() -> None:
     print(f"Question Type: {result['question_type']}")
     print(f"Domain Type: {result['domain_type']}")
     print(f"Route: {result['route']}")
+    print(f"Answer Strategy: {get_answer_instruction(result['domain_type'])}")
     print()
 
     print(result["answer"])

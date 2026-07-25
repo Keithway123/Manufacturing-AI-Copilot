@@ -172,6 +172,7 @@ def chat_with_retrieval(
     question: str,
     similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
     department: str | None = None,
+    domain_type: str = "general_knowledge",
 ) -> dict:
 
     matches = retrieve_matches(
@@ -199,6 +200,7 @@ def chat_with_retrieval(
     answer = generate_answer_with_qwen(
         question=question,
         matches=filtered_matches,
+        domain_type=domain_type,
     )
 
     sources = build_sources(filtered_matches)
