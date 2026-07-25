@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 KNOWLEDGE_QA = "knowledge_qa"
 UNKNOWN = "unknown"
 
@@ -58,7 +60,13 @@ DOMAIN_KEYWORDS = {
 }
 
 
-def classify_question(question: str) -> dict:
+class ClassificationResult(TypedDict):
+    question_type: str
+    domain_type: str
+    route: str
+
+
+def classify_question(question: str) -> ClassificationResult:
     question_type = UNKNOWN
     route = "fallback"
     domain_type = UNKNOWN_DOMAIN

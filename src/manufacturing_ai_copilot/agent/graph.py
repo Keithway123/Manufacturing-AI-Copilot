@@ -5,7 +5,6 @@ from langgraph.graph import END, START, StateGraph
 
 from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE, NO_ANSWER_MESSAGE
 from manufacturing_ai_copilot.rag.query_engine import chat_with_retrieval
-
 from manufacturing_ai_copilot.agent.classifier import (
     UNKNOWN,
     UNKNOWN_DOMAIN,
