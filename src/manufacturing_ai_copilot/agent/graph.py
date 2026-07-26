@@ -32,6 +32,9 @@ class AgentState(TypedDict):
     sources: list[dict[str, Any]]
     retrieval: dict[str, Any]
 
+    # 内部review状态 ：后续用于判断是否需要人工确认
+    answer_review: dict[str, Any]
+
 
 # 定义节点处理逻辑
 def classify_question_node(state: AgentState) -> dict:
@@ -51,6 +54,22 @@ def rag_answer_node(state: AgentState) -> dict:
         "answer": result["answer"],
         "sources": result["sources"],
         "retrieval": result["retrieval"],
+    }
+
+
+def review_answer_node(state: AgentState) -> dict:
+    sources = state["sources"]
+    retrieval = state["retrieval"]
+
+    has_sources = len(sources) > 0
+    used_count = retrieval.get("used_count", 0)
+
+    return {
+        "answer_review": {
+            "has_sources": has_sources,
+            "used_count": used_count,
+            "passed": has_sources and used_count > 0,
+        }
     }
 
 
@@ -77,6 +96,7 @@ def build_graph():
     graph_builder.add_node("classify_question", classify_question_node)
     graph_builder.add_node("rag_answer", rag_answer_node)
     graph_builder.add_node("fallback", fallback_node)
+    graph_builder.add_node("review_answer", review_answer_node)
 
     graph_builder.add_edge(START, "classify_question")
     graph_builder.add_conditional_edges(
@@ -88,7 +108,8 @@ def build_graph():
         },
     )
 
-    graph_builder.add_edge("rag_answer", END)
+    graph_builder.add_edge("rag_answer", "review_answer")
+    graph_builder.add_edge("review_answer", END)
     graph_builder.add_edge("fallback", END)
 
     return graph_builder.compile()
@@ -113,6 +134,7 @@ def run_agent(
         "answer": "",
         "sources": [],
         "retrieval": {},
+        "answer_review": {},
     }
 
     return graph.invoke(initial_state)
