@@ -22,10 +22,9 @@ class AgentState(TypedDict):
     department: str | None
     storage_dir: Path
 
+    # 内部业务域分类，用于调试和后续多 Agent 拆分
     question_type: str
     route: str
-
-    # 内部业务域分类，用于调试和后续多 Agent 拆分
     domain_type: str
 
     # 输出：节点执行后写回State
