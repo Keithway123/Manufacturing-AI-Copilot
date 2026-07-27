@@ -13,6 +13,10 @@ from manufacturing_ai_copilot.agent.classifier import (
     classify_question,
 )
 
+ANSWER_QUALITY_GROUNDED = "grounded"
+ANSWER_QUALITY_WEAK = "weak"
+ANSWER_QUALITY_NOT_APPLICABLE = "not_applicable"
+
 
 # 定义流程数据
 class AgentState(TypedDict):
@@ -64,11 +68,16 @@ def review_answer_node(state: AgentState) -> dict:
     has_sources = len(sources) > 0
     used_count = retrieval.get("used_count", 0)
 
+    is_grounded = has_sources and used_count > 0
+
+    answer_quality = ANSWER_QUALITY_GROUNDED if is_grounded else ANSWER_QUALITY_WEAK
+
     return {
         "answer_review": {
+            "answer_quality": answer_quality,
+            "needs_review": not is_grounded,
             "has_sources": has_sources,
             "used_count": used_count,
-            "passed": has_sources and used_count > 0,
         }
     }
 
