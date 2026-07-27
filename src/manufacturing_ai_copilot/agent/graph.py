@@ -19,6 +19,7 @@ ANSWER_QUALITY_NOT_APPLICABLE = "not_applicable"
 
 REVIEW_ROUTE_FINAL = "final"
 REVIEW_ROUTE_HUMAN_REVIEW = "human_review"
+HUMAN_REVIEW_STATUS_REQUIRED = "requires_manual_review"
 
 
 # 定义流程数据
@@ -101,7 +102,8 @@ def human_review_stub_node(state: AgentState) -> dict:
         "answer_review": {
             **answer_review,
             "human_review_required": True,
-            "human_review_status": "pending",
+            "human_review_status": HUMAN_REVIEW_STATUS_REQUIRED,
+            "human_review_decision": None,
         }
     }
 
