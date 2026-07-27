@@ -17,6 +17,9 @@ ANSWER_QUALITY_GROUNDED = "grounded"
 ANSWER_QUALITY_WEAK = "weak"
 ANSWER_QUALITY_NOT_APPLICABLE = "not_applicable"
 
+REVIEW_ROUTE_FINAL = "final"
+REVIEW_ROUTE_HUMAN_REVIEW = "human_review"
+
 
 # 定义流程数据
 class AgentState(TypedDict):
@@ -82,6 +85,27 @@ def review_answer_node(state: AgentState) -> dict:
     }
 
 
+def route_by_answer_review(state: AgentState) -> str:
+    answer_review = state["answer_review"]
+
+    if answer_review.get("needs_review"):
+        return REVIEW_ROUTE_HUMAN_REVIEW
+
+    return REVIEW_ROUTE_FINAL
+
+
+def human_review_stub_node(state: AgentState) -> dict:
+    answer_review = state["answer_review"]
+
+    return {
+        "answer_review": {
+            **answer_review,
+            "human_review_required": True,
+            "human_review_status": "pending",
+        }
+    }
+
+
 def fallback_node(state: AgentState) -> dict:
     return {
         "answer": NO_ANSWER_MESSAGE,
@@ -106,6 +130,7 @@ def build_graph():
     graph_builder.add_node("rag_answer", rag_answer_node)
     graph_builder.add_node("fallback", fallback_node)
     graph_builder.add_node("review_answer", review_answer_node)
+    graph_builder.add_node("human_review_stub", human_review_stub_node)
 
     graph_builder.add_edge(START, "classify_question")
     graph_builder.add_conditional_edges(
@@ -116,9 +141,16 @@ def build_graph():
             ROUTE_FALLBACK: "fallback",
         },
     )
-
     graph_builder.add_edge("rag_answer", "review_answer")
-    graph_builder.add_edge("review_answer", END)
+    graph_builder.add_conditional_edges(
+        "review_answer",
+        route_by_answer_review,
+        {
+            REVIEW_ROUTE_FINAL: END,
+            REVIEW_ROUTE_HUMAN_REVIEW: "human_review_stub",
+        },
+    )
+    graph_builder.add_edge("human_review_stub", END)
     graph_builder.add_edge("fallback", END)
 
     return graph_builder.compile()

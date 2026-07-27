@@ -103,6 +103,8 @@ def test_run_agent_marks_answer_as_weak_when_sources_are_missing(monkeypatch):
     assert result["answer_review"]["needs_review"] is True
     assert result["answer_review"]["has_sources"] is False
     assert result["answer_review"]["used_count"] == 0
+    assert result["answer_review"]["human_review_required"] is True
+    assert result["answer_review"]["human_review_status"] == "pending"
 
 
 def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
