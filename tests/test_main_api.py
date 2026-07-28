@@ -67,6 +67,8 @@ def test_chat_returns_response_from_rag_layer(monkeypatch):
     assert "question_type" not in data
     assert "domain_type" not in data
     assert "route" not in data
+    assert "tool_result" not in data
+    assert "answer_review" not in data
 
     assert data == {
         "question": "贴片机报警 E203 怎么处理？",
