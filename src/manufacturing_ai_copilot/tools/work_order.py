@@ -2,6 +2,7 @@ from typing import Any
 
 
 def query_work_order_status_stub(work_order_id: str) -> dict[str, Any]:
+
     return {
         "tool_name": "query_work_order_status",
         "work_order_id": work_order_id,

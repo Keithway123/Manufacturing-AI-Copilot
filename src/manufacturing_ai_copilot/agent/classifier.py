@@ -1,12 +1,14 @@
 from typing import TypedDict
 
 KNOWLEDGE_QA = "knowledge_qa"
+TOOL_REQUEST = "tool_request"
 UNKNOWN = "unknown"
 
 EQUIPMENT_SOP = "equipment_sop"
 PRODUCTION_ORDER = "production_order"
 QUALITY_ISSUE = "quality_issue"
 IT_SUPPORT = "it_support"
+WORK_ORDER_STATUS = "work_order_status"
 GENERAL_KNOWLEDGE = "general_knowledge"
 UNKNOWN_DOMAIN = "unknown"
 
@@ -24,6 +26,12 @@ KNOWLEDGE_QA_KEYWORDS = (
     "注塑",
     "贴片机",
     "设备",
+)
+
+WORK_ORDER_STATUS_KEYWORDS = (
+    "工单状态",
+    "当前状态",
+    "查询状态",
 )
 
 # 每个业务域独立维护关键词，避免和“是否进入知识库问答”的判断混在一起
@@ -60,6 +68,7 @@ DOMAIN_KEYWORDS = {
 }
 
 ROUTE_RAG_ANSWER = "rag_answer"
+ROUTE_TOOL_NODE = "tool_node"
 ROUTE_FALLBACK = "fallback"
 
 
@@ -73,6 +82,14 @@ def classify_question(question: str) -> ClassificationResult:
     question_type = UNKNOWN
     route = ROUTE_FALLBACK
     domain_type = UNKNOWN_DOMAIN
+
+    for keyword in WORK_ORDER_STATUS_KEYWORDS:
+        if keyword.lower() in question.lower():
+            return {
+                "question_type": TOOL_REQUEST,
+                "domain_type": WORK_ORDER_STATUS,
+                "route": ROUTE_TOOL_NODE,
+            }
 
     for keyword in KNOWLEDGE_QA_KEYWORDS:
         if keyword.lower() in question.lower():

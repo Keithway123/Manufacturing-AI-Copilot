@@ -25,6 +25,10 @@ def main() -> None:
     print(f"Domain Type: {result['domain_type']}")
     print(f"Route: {result['route']}")
     print(f"Answer Strategy: {get_answer_instruction(result['domain_type'])}")
+
+    if result["tool_result"]:
+        print(f"Tool Result: {result['tool_result']}")
+
     print()
 
     print(result["answer"])

@@ -7,6 +7,7 @@ from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE, NO_ANSWER_
 from manufacturing_ai_copilot.rag.query_engine import chat_with_retrieval
 from manufacturing_ai_copilot.agent.classifier import (
     ROUTE_RAG_ANSWER,
+    ROUTE_TOOL_NODE,
     ROUTE_FALLBACK,
     UNKNOWN,
     UNKNOWN_DOMAIN,
@@ -91,9 +92,25 @@ def review_answer_node(state: AgentState) -> dict:
 
 
 def tool_node(state: AgentState) -> dict:
+    # V3.6 先固定工单号，后续再从 question 中解析。
     tool_result = query_work_order_status_stub("WO-20260727-001")
 
+    answer = (
+        f"工单 {tool_result['work_order_id']} 当前状态为 {tool_result['status']}。"
+        f"产线：{tool_result['line']}，产品：{tool_result['product']}，"
+        f"计划数量：{tool_result['planned_quantity']}，"
+        f"已完成数量：{tool_result['completed_quantity']}。"
+    )
+
     return {
+        "answer": answer,
+        "sources": [],
+        "retrieval": {
+            "top_k": state["top_k"],
+            "min_score": MIN_RETRIEVAL_SCORE,
+            "retrieved_count": 0,
+            "used_count": 0,
+        },
         "tool_result": tool_result,
     }
 
@@ -142,6 +159,7 @@ def build_graph():
 
     graph_builder.add_node("classify_question", classify_question_node)
     graph_builder.add_node("rag_answer", rag_answer_node)
+    graph_builder.add_node("tool_node", tool_node)
     graph_builder.add_node("fallback", fallback_node)
     graph_builder.add_node("review_answer", review_answer_node)
     graph_builder.add_node("human_review_stub", human_review_stub_node)
@@ -152,9 +170,11 @@ def build_graph():
         route_by_question_type,
         {
             ROUTE_RAG_ANSWER: "rag_answer",
+            ROUTE_TOOL_NODE: "tool_node",
             ROUTE_FALLBACK: "fallback",
         },
     )
+    graph_builder.add_edge("tool_node", END)
     graph_builder.add_edge("rag_answer", "review_answer")
     graph_builder.add_conditional_edges(
         "review_answer",
