@@ -130,3 +130,18 @@ def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
     assert result["retrieval"]["retrieved_count"] == 0
     assert result["retrieval"]["used_count"] == 0
     assert result["answer_review"] == {}
+
+
+def test_tool_node_returns_work_order_tool_result():
+    result = graph.tool_node({})
+
+    tool_result = result["tool_result"]
+
+    assert tool_result["tool_name"] == "query_work_order_status"
+    assert tool_result["work_order_id"] == "WO-20260727-001"
+    assert tool_result["status"] == "paused"
+    assert tool_result["product"] == "SMT Controller Board"
+    assert tool_result["line"] == "SMT-01"
+    assert tool_result["planned_quantity"] == 1000
+    assert tool_result["completed_quantity"] == 420
+    assert tool_result["source"] == "stub"

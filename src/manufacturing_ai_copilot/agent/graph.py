@@ -12,6 +12,7 @@ from manufacturing_ai_copilot.agent.classifier import (
     UNKNOWN_DOMAIN,
     classify_question,
 )
+from manufacturing_ai_copilot.tools.work_order import query_work_order_status_stub
 
 ANSWER_QUALITY_GROUNDED = "grounded"
 ANSWER_QUALITY_WEAK = "weak"
@@ -39,6 +40,9 @@ class AgentState(TypedDict):
     answer: str
     sources: list[dict[str, Any]]
     retrieval: dict[str, Any]
+
+    # 工具调用结果：保存结构化数据
+    tool_result: dict[str, Any]
 
     # 内部review状态 ：后续用于判断是否需要人工确认
     answer_review: dict[str, Any]
@@ -83,6 +87,14 @@ def review_answer_node(state: AgentState) -> dict:
             "has_sources": has_sources,
             "used_count": used_count,
         }
+    }
+
+
+def tool_node(state: AgentState) -> dict:
+    tool_result = query_work_order_status_stub("WO-20260727-001")
+
+    return {
+        "tool_result": tool_result,
     }
 
 
@@ -177,6 +189,7 @@ def run_agent(
         "answer": "",
         "sources": [],
         "retrieval": {},
+        "tool_result": {},
         "answer_review": {},
     }
 
