@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 STORAGE_DIR = PROJECT_ROOT / "storage"
 
 LLM_MODEL = "qwen3.7-plus"
-EMBEDDING_MODEL = "text-embedding-v3"
+EMBEDDING_MODEL = "qwen3.7-text-embedding"
 DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 DEFAULT_RETRIEVAL_TOP_K = 3
