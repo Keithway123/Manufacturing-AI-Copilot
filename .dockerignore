@@ -1,0 +1,30 @@
+# 本机虚拟环境，容器内会重新安装依赖
+.venv/
+
+# 本地密钥，不能进入镜像构建上下文
+.env
+
+# RAG 索引后续通过 volume 挂载，不直接打进镜像
+storage/
+
+# 原始数据暂不属于运行 API 的最小镜像内容
+data/
+
+# 学习文档和 Obsidian notes 不属于服务运行依赖
+docs/
+notes/
+.obsidian/
+
+# Git / IDE / 缓存
+.git/
+.vscode/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# 测试文件暂不进入运行镜像
+tests/
+
+# 本项目的 Codex/Agent 本地配置
+.agents/
+.codex/
