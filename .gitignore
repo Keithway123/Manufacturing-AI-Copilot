@@ -17,6 +17,7 @@ venv/
 # Secrets
 .env
 .env.*
+!.env.example
 .obsidian
 
 # Local data / generated files
