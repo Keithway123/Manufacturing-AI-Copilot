@@ -1,0 +1,11 @@
+services:
+  manufacturing-api:
+    build: .
+    image: manufacturing-ai-copilot-api:v0.1
+    container_name: manufacturing-api-test
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    ports:
+      - "8001:8000"
