@@ -7,6 +7,11 @@ VERSION = "0.1.0"
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 STORAGE_DIR = PROJECT_ROOT / "storage"
 
+DEFAULT_DATABASE_PATH = PROJECT_ROOT / "data" / "manufacturing.db"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", f"sqlite:///{DEFAULT_DATABASE_PATH.as_posix()}"
+)
+
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.7-plus")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "qwen3.7-text-embedding")
 DASHSCOPE_BASE_URL = os.getenv(
