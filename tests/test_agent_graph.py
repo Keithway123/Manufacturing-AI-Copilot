@@ -157,6 +157,7 @@ def test_tool_node_returns_work_order_tool_result(monkeypatch):
 
     result = graph.tool_node(
         {
+            "question": "查询工单 WO-20260727-001 当前状态",
             "top_k": 3,
         }
     )
@@ -230,12 +231,42 @@ def test_tool_node_returns_not_found_answer(monkeypatch):
         fake_query_work_order_status,
     )
 
-    result = graph.tool_node({"top_k": 3})
+    result = graph.tool_node(
+        {"question": "查询工单 WO-20260727-001 当前状态", "top_k": 3}
+    )
     tool_result = result["tool_result"]
 
     assert tool_result["found"] is False
     assert "status" not in tool_result
     assert "未找到工单" in result["answer"]
     assert "WO-20260727-001" in result["answer"]
+    assert result["sources"] == []
+    assert result["retrieval"]["used_count"] == 0
+
+
+def test_tool_node_requests_work_order_id_when_missing(monkeypatch):
+    def fake_query_work_order_status(work_order_id):
+        # 缺少工单号时不应该访问数据库工具
+        raise AssertionError("missing work order id should not query databaase")
+
+    monkeypatch.setattr(
+        graph,
+        "query_work_order_status",
+        fake_query_work_order_status,
+    )
+
+    result = graph.tool_node(
+        {
+            "question": "查询工单当前状态",
+            "top_k": 3,
+        }
+    )
+
+    tool_result = result["tool_result"]
+
+    assert tool_result["work_order_id"] is None
+    assert tool_result["found"] is False
+    assert tool_result["reason"] == graph.TOOL_REASON_MISSING_WORK_ORDER_ID
+    assert "请提供工单号" in result["answer"]
     assert result["sources"] == []
     assert result["retrieval"]["used_count"] == 0

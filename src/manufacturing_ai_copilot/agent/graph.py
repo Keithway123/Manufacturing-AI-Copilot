@@ -13,7 +13,11 @@ from manufacturing_ai_copilot.agent.classifier import (
     UNKNOWN_DOMAIN,
     classify_question,
 )
-from manufacturing_ai_copilot.tools.work_order import query_work_order_status
+from manufacturing_ai_copilot.tools.work_order import (
+    query_work_order_status,
+    TOOL_REASON_MISSING_WORK_ORDER_ID,
+    extract_work_order_id,
+)
 
 ANSWER_QUALITY_GROUNDED = "grounded"
 ANSWER_QUALITY_WEAK = "weak"
@@ -92,19 +96,31 @@ def review_answer_node(state: AgentState) -> dict:
 
 
 def tool_node(state: AgentState) -> dict:
-    # V3.6 先固定工单号，后续再从 question 中解析。
-    tool_result = query_work_order_status("WO-20260727-001")
 
-    if not tool_result["found"]:
-        # answer 面向用户；tool_result保留结构化查询结果。
-        answer = f"未找到工单{tool_result['work_order_id']}。"
+    work_order_id = extract_work_order_id(state["question"])
+
+    if work_order_id is None:
+        tool_result = {
+            "tool_name": "query_work_order_status",
+            "work_order_id": None,
+            "found": False,
+            "reason": TOOL_REASON_MISSING_WORK_ORDER_ID,
+            "source": "question",
+        }
+        answer = "请提供工单号，例如 WO-20260727-001。"
     else:
-        answer = (
-            f"工单 {tool_result['work_order_id']} 当前状态为 {tool_result['status']}。"
-            f"产线：{tool_result['line']}，产品：{tool_result['product']}，"
-            f"计划数量：{tool_result['planned_quantity']}，"
-            f"已完成数量：{tool_result['completed_quantity']}。"
-        )
+        tool_result = query_work_order_status(work_order_id)
+
+        if not tool_result["found"]:
+            # answer 面向用户；tool_result保留结构化查询结果。
+            answer = f"未找到工单{tool_result['work_order_id']}。"
+        else:
+            answer = (
+                f"工单 {tool_result['work_order_id']} 当前状态为 {tool_result['status']}。"
+                f"产线：{tool_result['line']}，产品：{tool_result['product']}，"
+                f"计划数量：{tool_result['planned_quantity']}，"
+                f"已完成数量：{tool_result['completed_quantity']}。"
+            )
 
     return {
         "answer": answer,
