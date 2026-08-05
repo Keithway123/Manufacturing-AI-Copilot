@@ -13,7 +13,7 @@ from manufacturing_ai_copilot.agent.classifier import (
     UNKNOWN_DOMAIN,
     classify_question,
 )
-from manufacturing_ai_copilot.tools.work_order import query_work_order_status_stub
+from manufacturing_ai_copilot.tools.work_order import query_work_order_status
 
 ANSWER_QUALITY_GROUNDED = "grounded"
 ANSWER_QUALITY_WEAK = "weak"
@@ -93,14 +93,18 @@ def review_answer_node(state: AgentState) -> dict:
 
 def tool_node(state: AgentState) -> dict:
     # V3.6 先固定工单号，后续再从 question 中解析。
-    tool_result = query_work_order_status_stub("WO-20260727-001")
+    tool_result = query_work_order_status("WO-20260727-001")
 
-    answer = (
-        f"工单 {tool_result['work_order_id']} 当前状态为 {tool_result['status']}。"
-        f"产线：{tool_result['line']}，产品：{tool_result['product']}，"
-        f"计划数量：{tool_result['planned_quantity']}，"
-        f"已完成数量：{tool_result['completed_quantity']}。"
-    )
+    if not tool_result["found"]:
+        # answer 面向用户；tool_result保留结构化查询结果。
+        answer = f"未找到工单{tool_result['work_order_id']}。"
+    else:
+        answer = (
+            f"工单 {tool_result['work_order_id']} 当前状态为 {tool_result['status']}。"
+            f"产线：{tool_result['line']}，产品：{tool_result['product']}，"
+            f"计划数量：{tool_result['planned_quantity']}，"
+            f"已完成数量：{tool_result['completed_quantity']}。"
+        )
 
     return {
         "answer": answer,

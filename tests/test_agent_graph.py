@@ -132,7 +132,29 @@ def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
     assert result["answer_review"] == {}
 
 
-def test_tool_node_returns_work_order_tool_result():
+def test_tool_node_returns_work_order_tool_result(monkeypatch):
+    def fake_query_work_order_status(work_order_id):
+        assert work_order_id == "WO-20260727-001"
+
+        return {
+            "tool_name": "query_work_order_status",
+            "work_order_id": work_order_id,
+            "found": True,
+            "status": "paused",
+            "product": "SMT Controller Board",
+            "line": "SMT-01",
+            "planned_quantity": 1000,
+            "completed_quantity": 420,
+            "pause_reason": "equipment_alarm",
+            "source": "database",
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "query_work_order_status",
+        fake_query_work_order_status,
+    )
+
     result = graph.tool_node(
         {
             "top_k": 3,
@@ -141,15 +163,10 @@ def test_tool_node_returns_work_order_tool_result():
 
     tool_result = result["tool_result"]
 
-    assert tool_result["tool_name"] == "query_work_order_status"
-    assert tool_result["work_order_id"] == "WO-20260727-001"
+    assert tool_result["found"] is True
+    assert tool_result["source"] == "database"
     assert tool_result["status"] == "paused"
-    assert tool_result["product"] == "SMT Controller Board"
-    assert tool_result["line"] == "SMT-01"
-    assert tool_result["planned_quantity"] == 1000
-    assert tool_result["completed_quantity"] == 420
-    assert tool_result["source"] == "stub"
-    assert result["retrieval"]["top_k"] == 3
+    assert "WO-20260727-001" in result["answer"]
     assert result["retrieval"]["used_count"] == 0
 
 
@@ -158,7 +175,26 @@ def test_run_agent_routes_work_order_status_question_to_tool_node(monkeypatch):
     def fake_chat_with_retrieval(**kwargs):
         raise AssertionError("tool request should not call RAG")
 
+    def fake_query_work_order_status(work_order_id):
+        return {
+            "tool_name": "query_work_order_status",
+            "work_order_id": work_order_id,
+            "found": True,
+            "status": "paused",
+            "product": "SMT Controller Board",
+            "line": "SMT-01",
+            "planned_quantity": 1000,
+            "completed_quantity": 420,
+            "pause_reason": "equipment_alarm",
+            "source": "database",
+        }
+
     monkeypatch.setattr(graph, "chat_with_retrieval", fake_chat_with_retrieval)
+    monkeypatch.setattr(
+        graph,
+        "query_work_order_status",
+        fake_query_work_order_status,
+    )
 
     result = graph.run_agent(
         question="查询工单 WO-20260727-001 当前状态",
@@ -174,6 +210,32 @@ def test_run_agent_routes_work_order_status_question_to_tool_node(monkeypatch):
     assert result["tool_result"]["work_order_id"] == "WO-20260727-001"
     assert result["tool_result"]["status"] == "paused"
 
+    assert "WO-20260727-001" in result["answer"]
+    assert result["sources"] == []
+    assert result["retrieval"]["used_count"] == 0
+
+
+def test_tool_node_returns_not_found_answer(monkeypatch):
+    def fake_query_work_order_status(work_order_id):
+        return {
+            "tool_name": "query_work_order_status",
+            "work_order_id": work_order_id,
+            "found": False,
+            "source": "database",
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "query_work_order_status",
+        fake_query_work_order_status,
+    )
+
+    result = graph.tool_node({"top_k": 3})
+    tool_result = result["tool_result"]
+
+    assert tool_result["found"] is False
+    assert "status" not in tool_result
+    assert "未找到工单" in result["answer"]
     assert "WO-20260727-001" in result["answer"]
     assert result["sources"] == []
     assert result["retrieval"]["used_count"] == 0
