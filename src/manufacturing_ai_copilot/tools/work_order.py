@@ -24,6 +24,7 @@ def extract_work_order_id(question: str) -> str | None:
 
 
 def query_work_order_status_stub(work_order_id: str) -> dict[str, Any]:
+    # 旧 stub模拟数据
 
     return {
         "tool_name": "query_work_order_status",
