@@ -4,11 +4,12 @@ from pathlib import Path
 import sqlite3
 import pytest
 
-from manufacturing_ai_copilot.db import schema, seed
+from manufacturing_ai_copilot.db import connection, schema, seed
 from manufacturing_ai_copilot.db.connection import (
     get_connection,
     get_sqlite_path,
 )
+from manufacturing_ai_copilot.db.errors import DatabaseUnavailableError
 
 
 @pytest.fixture
@@ -145,3 +146,59 @@ def test_work_orders_rejects_negative_quantity(temporary_database_url):
                     0,
                 ),
             )
+
+
+def test_get_connection_converts_sqlite_operational_error(
+    tmp_path,
+    monkeypatch,
+):
+    database_url = f"sqlite:///{(tmp_path / 'unavailable.db').as_posix()}"
+
+    def fake_sqlite_connect(database_path):
+        # 模拟SQLite文件无法打开。
+        raise sqlite3.OperationalError("unable to open database file")
+
+    # 替换connection.py 实际查找和调用的connect。
+    monkeypatch.setattr(
+        connection.sqlite3,
+        "connect",
+        fake_sqlite_connect,
+    )
+
+    with pytest.raises(
+        DatabaseUnavailableError,
+        match="Database connection failed",
+    ) as exc_info:
+        get_connection(database_url)
+
+    # 验证 raise ... from exc 保留了原始驱动异常。
+    assert isinstance(
+        exc_info.value.__cause__,
+        sqlite3.OperationalError,
+    )
+
+
+def test_get_connection_converts_postgresql_operational_error(
+    monkeypatch,
+):
+    def fake_psycopg_connect(database_url, **kwargs):
+        # 模拟 PostgreSQL 停止或拒绝连接。
+        raise connection.psycopg.OperationalError("connection refused")
+
+    monkeypatch.setattr(
+        connection.psycopg,
+        "connect",
+        fake_psycopg_connect,
+    )
+
+    with pytest.raises(
+        DatabaseUnavailableError,
+        match="Database connection failed",
+    ) as exc_info:
+        get_connection("postgresql://user:password@postgres:5432/manufacturing")
+
+    # 项目异常应保留底层 Psycopg 异常。
+    assert isinstance(
+        exc_info.value.__cause__,
+        connection.psycopg.OperationalError,
+    )

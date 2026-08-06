@@ -4,6 +4,7 @@ from manufacturing_ai_copilot.core.config import (
     SERVICE_NAME,
     VERSION,
 )
+from manufacturing_ai_copilot.db.errors import DatabaseUnavailableError
 import manufacturing_ai_copilot.main as main
 
 client = TestClient(main.app)
@@ -115,7 +116,7 @@ def test_chat_returns_503_when_rag_index_is_missing(monkeypatch):
     assert "RAG index not found" in response.json()["detail"]
 
 
-def test_chat_returns_500_when_rag_layer_fails(monkeypatch):
+def test_chat_returns_500_when_agent_fails(monkeypatch):
     def fake_run_agent(
         storage_dir,
         question: str,
@@ -136,7 +137,34 @@ def test_chat_returns_500_when_rag_layer_fails(monkeypatch):
 
     assert response.status_code == 500
     assert response.json() == {
-        "detail": "RAG chat failed. Check server logs.",
+        "detail": "Agent chat failed. Check server logs.",
+    }
+
+
+def test_chat_returns_503_when_database_is_unavailable(monkeypatch):
+    def fake_run_agent(
+        storage_dir,
+        question: str,
+        top_k: int,
+        department: str | None,
+    ):
+        # API层只需要模拟下层抛出项目级数据库异常。
+        raise DatabaseUnavailableError("Database connection failed")
+
+    # main.chat()实际调用的是main模块中已经导入的run_agent.
+    monkeypatch.setattr(main, "run_agent", fake_run_agent)
+
+    response = client.post(
+        "/chat",
+        json={
+            "question": "查询 WO-20260727-001 工单状态",
+            "top_k": 3,
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Database service is temporarily unavailable.",
     }
 
 

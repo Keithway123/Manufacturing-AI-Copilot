@@ -12,6 +12,7 @@ from manufacturing_ai_copilot.core.config import (
 )
 from manufacturing_ai_copilot.rag.query_engine import retrieve_matches
 from manufacturing_ai_copilot.agent.graph import run_agent
+from manufacturing_ai_copilot.db.errors import DatabaseUnavailableError
 
 logger = logging.getLogger(__name__)
 
@@ -125,14 +126,21 @@ def chat(request: ChatRequest) -> ChatResponse:
             department=request.department,
         )
 
+    except DatabaseUnavailableError as exc:
+        logger.exception("Database unavailable during Agent chat")
+        raise HTTPException(
+            status_code=503,
+            detail="Database service is temporarily unavailable.",
+        ) from exc
+
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     except Exception as exc:
-        logger.exception("RAG chat failed")
+        logger.exception("Agent chat failed")
         raise HTTPException(
             status_code=500,
-            detail="RAG chat failed. Check server logs.",
+            detail="Agent chat failed. Check server logs.",
         ) from exc
 
     return ChatResponse(**result)

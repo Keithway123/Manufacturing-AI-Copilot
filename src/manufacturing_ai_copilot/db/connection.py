@@ -6,6 +6,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from manufacturing_ai_copilot.core.config import DATABASE_URL
+from manufacturing_ai_copilot.db.errors import DatabaseUnavailableError
 
 SQLITE_URL_PREFIX = "sqlite:///"
 POSTGRESQL_URL_PREFIX = "postgresql://"
@@ -36,15 +37,21 @@ def get_connection(database_url: str = DATABASE_URL) -> DatabaseConnection:
     if database_url.startswith(SQLITE_URL_PREFIX):
         database_path = get_sqlite_path(database_url)
         database_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            connection = sqlite3.connect(database_path)
+        except sqlite3.OperationalError as exc:
+            raise DatabaseUnavailableError("Database connection failed") from exc
 
-        connection = sqlite3.connect(database_path)
         connection.row_factory = sqlite3.Row
         return connection
 
     if database_url.startswith(POSTGRESQL_URL_PREFIX):
-        return psycopg.connect(
-            database_url,
-            row_factory=dict_row,
-        )
+        try:
+            return psycopg.connect(
+                database_url,
+                row_factory=dict_row,
+            )
+        except psycopg.OperationalError as exc:
+            raise DatabaseUnavailableError("Database connection failed") from exc
 
     raise ValueError("DATABASE_URL must use sqlite:/// or postgresql:// format")
