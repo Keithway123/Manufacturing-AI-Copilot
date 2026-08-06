@@ -5,7 +5,37 @@ services:
     container_name: manufacturing-api-test
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
     volumes:
       - ./storage:/app/storage
     ports:
       - "8001:8000"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: manufacturing-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      # 数据写入 named volume，删除容器后仍能保留。
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      # pg_isready 检查 PostgreSQL 是否能够接受连接。
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  # 顶层声明 named volume，供postgres服务引用。
+  postgres_data:
+  

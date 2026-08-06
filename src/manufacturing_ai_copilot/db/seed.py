@@ -1,5 +1,8 @@
 from contextlib import closing
-from manufacturing_ai_copilot.db.connection import get_connection
+from manufacturing_ai_copilot.db.connection import (
+    get_connection,
+    get_parameter_placeholder,
+)
 
 WORK_ORDER_SEED_DATA = [
     (
@@ -49,7 +52,7 @@ WORK_ORDER_SEED_DATA = [
     ),
 ]
 
-INSERT_WORK_ORDER_SQL = """
+INSERT_WORK_ORDER_SQL_TEMPLATE = """
 INSERT INTO work_orders(
     work_order_id,
     status,
@@ -59,7 +62,7 @@ INSERT INTO work_orders(
     completed_quantity,
     pause_reason
 )
-VALUES(?, ?, ?, ?, ?, ?, ?)
+VALUES({placeholders})
 ON CONFLICT(work_order_id) DO NOTHING
 """
 
@@ -67,9 +70,21 @@ ON CONFLICT(work_order_id) DO NOTHING
 def seed_work_orders() -> int:
     # 只忽略重复工单; 状态或数量等其他约束错误仍然抛出。
     with closing(get_connection()) as connection:
-        cursor = connection.executemany(
-            INSERT_WORK_ORDER_SQL,
-            WORK_ORDER_SEED_DATA,
+        placeholder = get_parameter_placeholder(connection)
+
+        placeholders = ", ".join([placeholder] * 7)
+
+        sql = INSERT_WORK_ORDER_SQL_TEMPLATE.format(
+            placeholders=placeholders,
         )
+
+        # Cursor 负责执行 SQL，并保存本次操作的结果信息。
+        with closing(connection.cursor()) as cursor:
+            cursor.executemany(
+                sql,
+                WORK_ORDER_SEED_DATA,
+            )
+            inserted_count = cursor.rowcount
+
         connection.commit()
-        return cursor.rowcount
+        return inserted_count

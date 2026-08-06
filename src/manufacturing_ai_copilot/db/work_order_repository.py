@@ -1,9 +1,12 @@
 from contextlib import closing
 from typing import Any
 
-from manufacturing_ai_copilot.db.connection import get_connection
+from manufacturing_ai_copilot.db.connection import (
+    get_connection,
+    get_parameter_placeholder,
+)
 
-SELECT_WORK_ORDER_BY_ID_SQL = """
+SELECT_WORK_ORDER_BY_ID_SQL_TEMPLATE = """
 SELECT 
     work_order_id,
     status,
@@ -15,14 +18,18 @@ SELECT
     created_at,
     updated_at
 FROM work_orders
-WHERE work_order_id = ?
+WHERE work_order_id = {placeholder}
 """
 
 
 def get_work_order_by_id(work_order_id: str) -> dict[str, Any] | None:
     with closing(get_connection()) as connection:
+        sql = SELECT_WORK_ORDER_BY_ID_SQL_TEMPLATE.format(
+            placeholder=get_parameter_placeholder(connection),
+        )
+
         row = connection.execute(
-            SELECT_WORK_ORDER_BY_ID_SQL,
+            sql,
             (work_order_id,),
         ).fetchone()
 
