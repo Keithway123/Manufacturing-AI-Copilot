@@ -12,6 +12,17 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL", f"sqlite:///{DEFAULT_DATABASE_PATH.as_posix()}"
 )
 
+QDRANT_URL = os.getenv(
+    "QDRANT_URL",
+    "http://127.0.0.1:6333",  # 本地python调试默认访问宿主机映射端口
+)
+
+QDRANT_COLLECTION_NAME = os.getenv(
+    "QDRANT_COLLECTION_NAME",
+    "manufacturing_knowledge",
+)
+
+
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.7-plus")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "qwen3.7-text-embedding")
 DASHSCOPE_BASE_URL = os.getenv(

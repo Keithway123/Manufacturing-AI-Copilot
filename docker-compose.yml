@@ -7,6 +7,8 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION_NAME: manufacturing_knowledge
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,7 +37,27 @@ services:
       timeout: 5s
       retries: 5
 
+  qdrant:
+    # 固定版本，避免latest升级后出现不可预测变化。
+    image: qdrant/qdrant:v1.18.2
+    container_name: manufacturing-qdrant
+
+    ports:
+      - "6333:6333"
+
+    volumes:
+      - qdrant_data:/qdrant/storage
+    
+    healthcheck:
+      # 这里只检查Qdrant是否监听6333端口。
+      test: ["CMD-SHELL","bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
 volumes:
   # 顶层声明 named volume，供postgres服务引用。
   postgres_data:
-  
+  # Qdrant的collection和points由Docker持久化管理。
+  qdrant_data:
