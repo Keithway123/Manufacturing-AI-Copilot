@@ -21,6 +21,8 @@ QDRANT_COLLECTION_NAME = os.getenv(
     "QDRANT_COLLECTION_NAME",
     "manufacturing_knowledge",
 )
+QDRANT_VECTOR_SIZE = 1024
+QDRANT_DISTANCE = "Cosine"
 
 
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.7-plus")
