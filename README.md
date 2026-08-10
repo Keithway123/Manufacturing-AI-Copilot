@@ -1,20 +1,22 @@
 # Manufacturing AI Copilot
 
-Manufacturing AI Copilot is a manufacturing-domain AI assistant built with FastAPI, RAG, LangGraph, and Dify.
+Manufacturing AI Copilot is a manufacturing-domain AI assistant built with FastAPI, LangGraph, Qdrant, PostgreSQL, and Dify.
 
-The current version supports knowledge-base Q&A, tool-style work order status lookup, fallback handling, and Docker Compose based local deployment.
+The current version supports knowledge-base Q&A, Qdrant-based RAG retrieval, PostgreSQL-backed work order lookup, fallback handling, and Docker Compose based local deployment.
 
 ## Current Capabilities
 
 - FastAPI backend with `/health`, `/search`, and `/chat`
-- LlamaIndex based local RAG over manufacturing Markdown documents
-- Persisted local index under `storage/`
+- Qdrant-based RAG retrieval over manufacturing Markdown documents
+- LlamaIndex document parsing, chunking, embedding, and Retriever integration
 - Qwen answer generation through DashScope
 - LangGraph Agent orchestration
 - RAG / Tool / Fallback branches
+- PostgreSQL-backed work order status lookup
 - Answer review and human review stub
 - Dify Chatflow as visual demo entrance
-- Dockerfile and Docker Compose for local backend deployment
+- Dockerfile and Docker Compose for local backend, PostgreSQL, and Qdrant
+- Retrieval evaluation script with Qdrant as default backend
 - Unit and API tests with pytest
 
 ## Tech Stack
@@ -25,6 +27,8 @@ The current version supports knowledge-base Q&A, tool-style work order status lo
 - LlamaIndex
 - LangGraph
 - DashScope / Qwen
+- Qdrant
+- PostgreSQL
 - Dify
 - Docker / Docker Compose
 - pytest
@@ -36,7 +40,7 @@ src/manufacturing_ai_copilot/  Application source code
 scripts/                       CLI utilities
 data/raw/                      Raw Markdown input documents
 data/eval/                     Retrieval evaluation questions
-storage/                       Local generated LlamaIndex index
+storage/                       Legacy local LlamaIndex index for comparison
 tests/                         Unit and API tests
 docs/                          Local project docs and progress records
 notes/                         Local Obsidian study notes
@@ -53,19 +57,35 @@ DASHSCOPE_API_KEY=replace-with-your-dashscope-api-key
 LLM_MODEL=qwen3.7-plus
 EMBEDDING_MODEL=qwen3.7-text-embedding
 DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+DATABASE_URL=sqlite:///data/manufacturing.db
+POSTGRES_DB=manufacturing
+POSTGRES_USER=manufacturing
+POSTGRES_PASSWORD=replace-with-local-password
+QDRANT_URL=http://127.0.0.1:6333
+QDRANT_COLLECTION_NAME=manufacturing_knowledge
 ```
 
 Do not commit `.env`.
 
 ## Build RAG Index
 
-`storage/` is generated from documents under `data/raw/`.
+The current main RAG index is stored in Qdrant.
+
+Start Qdrant first:
+
+```powershell
+docker compose up -d qdrant
+```
+
+Then build the index from documents under `data/raw/`:
 
 ```powershell
 uv run --env-file .env python -m scripts.build_index
 ```
 
-Rebuild the index when raw documents, chunking settings, or embedding model changes.
+Rebuild the Qdrant collection when raw documents, chunking settings, embedding model, vector size, or distance metric changes.
+
+`storage/` is kept only as a legacy local index path for comparison and fallback during the learning stage.
 
 ## Run Locally with uv
 
@@ -82,7 +102,7 @@ http://127.0.0.1:8000/health
 
 ## Run with Docker Compose
 
-Recommended V5 local deployment mode:
+Recommended local deployment mode:
 
 ```powershell
 docker compose up --build
@@ -95,17 +115,25 @@ http://127.0.0.1:8001/docs
 http://127.0.0.1:8001/health
 ```
 
-The Compose service mounts local `storage/` into the container, so build the RAG index before using `/chat`.
+Compose starts:
+
+- FastAPI backend
+- PostgreSQL for structured work order data
+- Qdrant for vector retrieval
+
+Before using RAG `/chat`, make sure the Qdrant collection has been built with `scripts.build_index`.
 
 ## API Endpoints
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/health` | Service health check |
-| POST | `/search` | Retrieve raw matching chunks for debugging |
+| POST | `/search` | Retrieve matching chunks for debugging |
 | POST | `/chat` | Run Agent workflow and return final answer |
 
 ## Example Chat Request
+
+Knowledge-base question:
 
 ```json
 {
@@ -115,11 +143,20 @@ The Compose service mounts local `storage/` into the container, so build the RAG
 }
 ```
 
-Minimal request:
+Tool question:
 
 ```json
 {
-  "question": "贴片机报警 E203 怎么处理？",
+  "question": "查询 WO-20260727-001 工单状态",
+  "top_k": 3
+}
+```
+
+Fallback question:
+
+```json
+{
+  "question": "今天天气怎么样？",
   "top_k": 3
 }
 ```
@@ -153,14 +190,30 @@ uv run pytest
 
 ## Retrieval Evaluation
 
+Qdrant backend:
+
 ```powershell
 uv run --env-file .env python -m scripts.evaluate_retrieval
 ```
 
+Legacy local storage backend:
+
+```powershell
+uv run --env-file .env python -m scripts.evaluate_retrieval --backend storage
+```
+
+## Current Boundaries
+
+- Question classification still uses keyword rules.
+- Tool branch currently supports only work order status lookup.
+- Tool + RAG combined workflow is not implemented yet.
+- Rerank, hybrid retrieval, incremental indexing, and production health checks are not implemented yet.
+- `storage/` legacy retrieval path is still kept for comparison and rollback.
+
 ## Roadmap
 
-- Add database-backed business data
-- Replace work order stub with real query tool
-- Upgrade local LlamaIndex storage to Qdrant or pgvector
-- Add production-oriented health checks
-- Improve deployment documentation
+- Add LLM-based intent classification
+- Add Tool + RAG combined workflow
+- Improve retrieval quality with rerank or hybrid retrieval
+- Add index health check and incremental indexing
+- Improve production deployment documentation
