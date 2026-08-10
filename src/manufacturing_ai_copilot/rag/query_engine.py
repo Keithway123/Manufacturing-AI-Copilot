@@ -1,14 +1,74 @@
 from pathlib import Path
 
-from llama_index.core import StorageContext, load_index_from_storage
+from llama_index.core import StorageContext, VectorStoreIndex, load_index_from_storage
 from llama_index.core.vector_stores import MetadataFilter, MetadataFilters
+from llama_index.vector_stores.qdrant import QdrantVectorStore
 from manufacturing_ai_copilot.rag.embedding import configure_embedding
 from manufacturing_ai_copilot.rag.llm import generate_answer_with_qwen
 from manufacturing_ai_copilot.core.config import (
     DEFAULT_RETRIEVAL_TOP_K,
     MIN_RETRIEVAL_SCORE,
     NO_ANSWER_MESSAGE,
+    QDRANT_COLLECTION_NAME,
 )
+from manufacturing_ai_copilot.rag.qdrant_client import get_qdrant_client
+
+
+# Qdrant
+def build_match_from_node(node_with_score) -> dict:
+    node = node_with_score.node
+    metadata = node.metadata or {}
+
+    return {
+        "score": node_with_score.score,
+        "document": metadata.get("file_name"),
+        "title": metadata.get("title"),
+        "content": node.get_content(),
+        "metadata": metadata,
+    }
+
+
+def load_qdrant_retriever(
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+    department: str | None = None,
+):
+    configure_embedding()
+
+    # vector_storage = 向量数据实际存放在哪里、怎么读写它
+    vector_storage = QdrantVectorStore(
+        client=get_qdrant_client(),
+        collection_name=QDRANT_COLLECTION_NAME,
+    )
+
+    # storage_context = 告诉 LlamaIndex：这次索引相关的数据存储组件用哪些
+    storage_context = StorageContext.from_defaults(vector_store=vector_storage)
+
+    # VectorStoreIndex-> 基于这个 storage_context 组装索引对象
+    index = VectorStoreIndex.from_vector_store(
+        vector_store=vector_storage,
+        storage_context=storage_context,
+    )
+
+    return index.as_retriever(
+        similarity_top_k=similarity_top_k,
+        filters=build_metadata_filters(department),
+    )
+
+
+def retrieve_qdrant_matches(
+    question: str,
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+    department: str | None = None,
+) -> list[dict]:
+    retriever = load_qdrant_retriever(
+        similarity_top_k=similarity_top_k,
+        department=department,
+    )
+
+    nodes = retriever.retrieve(question)
+    matches = [build_match_from_node(node) for node in nodes]
+
+    return filter_matches_by_score(matches)
 
 
 # 过滤低分的match
@@ -78,21 +138,7 @@ def retrieve_matches(
 
     nodes = retriever.retrieve(question)
 
-    matches = []
-
-    for node in nodes:
-        metadata = node.node.metadata
-
-        # 返回结构化结果，方便 FastAPI 直接转成 JSON
-        matches.append(
-            {
-                "score": node.score,
-                "document": metadata.get("file_name"),
-                "title": metadata.get("title"),
-                "content": node.node.get_content(),
-                "metadata": metadata,
-            }
-        )
+    matches = [build_match_from_node(node) for node in nodes]
     return matches
 
 

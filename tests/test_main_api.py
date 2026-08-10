@@ -183,8 +183,7 @@ def test_chat_rejects_empty_question():
 # /search Test
 def test_search_returns_matches_from_rag_layer(monkeypatch):
     # /search 是调试接口，只返回原始召回结果，不生成 answer。
-    def fake_retrieve_matches(
-        storage_dir,
+    def fake_retrieve_qdrant_matches(
         question: str,
         similarity_top_k: int,
         department: str | None,
@@ -203,7 +202,7 @@ def test_search_returns_matches_from_rag_layer(monkeypatch):
             }
         ]
 
-    monkeypatch.setattr(main, "retrieve_matches", fake_retrieve_matches)
+    monkeypatch.setattr(main, "retrieve_qdrant_matches", fake_retrieve_qdrant_matches)
 
     response = client.post(
         "/search",
@@ -233,15 +232,14 @@ def test_search_returns_matches_from_rag_layer(monkeypatch):
 
 
 def test_search_returns_503_when_rag_index_is_missing(monkeypatch):
-    def fake_retrieve_matches(
-        storage_dir,
+    def fake_retrieve_qdrant_matches(
         question: str,
         similarity_top_k: int,
         department: str | None,
     ):
         raise FileNotFoundError("RAG index not found")
 
-    monkeypatch.setattr(main, "retrieve_matches", fake_retrieve_matches)
+    monkeypatch.setattr(main, "retrieve_qdrant_matches", fake_retrieve_qdrant_matches)
 
     response = client.post(
         "/search",
@@ -256,15 +254,14 @@ def test_search_returns_503_when_rag_index_is_missing(monkeypatch):
 
 
 def test_search_returns_500_when_rag_layer_fails(monkeypatch):
-    def fake_retrieve_matches(
-        storage_dir,
+    def fake_retrieve_qdrant_matches(
         question: str,
         similarity_top_k: int,
         department: str | None,
     ):
         raise RuntimeError("unexpected error")
 
-    monkeypatch.setattr(main, "retrieve_matches", fake_retrieve_matches)
+    monkeypatch.setattr(main, "retrieve_qdrant_matches", fake_retrieve_qdrant_matches)
 
     response = client.post(
         "/search",

@@ -20,6 +20,66 @@ def test_build_metadata_filters_filters_by_department():
     assert filters.filters[0].value == "生产部"
 
 
+def test_retrieve_qdrant_matches_filters_low_score(monkeypatch):
+    class FakeNode:
+        def __init__(self, content: str, metadata: dict):
+            self.metadata = metadata
+            self._content = content
+
+        def get_content(self) -> str:
+            return self._content
+
+    class FakeNodeWithScore:
+        def __init__(self, score: float, content: str, metadata: dict):
+            self.score = score
+            self.node = FakeNode(content=content, metadata=metadata)
+
+    class FakeRetriever:
+        def retrieve(self, question: str):
+            return [
+                FakeNodeWithScore(
+                    score=0.8,
+                    content="E203 高相关chunk",
+                    metadata={
+                        "file_name": "SMT设备报警处理SOP.md",
+                        "title": "SMT设备报警处理SOP",
+                        "department": "生产部",
+                    },
+                ),
+                FakeNodeWithScore(
+                    score=0.3,
+                    content="低相关 chunk",
+                    metadata={
+                        "file_name": "质量异常8D报告模板.md",
+                        "title": "质量异常8D报告模板",
+                        "department": "质量部",
+                    },
+                ),
+            ]
+
+    def fake_load_qdrant_retriever(similarity_top_k: int, department: str | None):
+        assert similarity_top_k == 3
+        assert department is None
+        return FakeRetriever()
+
+    monkeypatch.setattr(
+        query_engine,
+        "load_qdrant_retriever",
+        fake_load_qdrant_retriever,
+    )
+
+    matches = query_engine.retrieve_qdrant_matches(
+        question="贴片机报警 E203 怎么处理？",
+        similarity_top_k=3,
+        department=None,
+    )
+
+    assert len(matches) == 1
+    assert matches[0]["score"] == 0.8
+    assert matches[0]["title"] == "SMT设备报警处理SOP"
+    assert matches[0]["document"] == "SMT设备报警处理SOP.md"
+
+
 def test_filter_matches_by_score_keeps_scores_at_or_above_threshold():
     # 测试过滤掉低分的match
     matches = [

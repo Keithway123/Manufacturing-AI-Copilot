@@ -10,7 +10,7 @@ from manufacturing_ai_copilot.core.config import (
     STORAGE_DIR,
     VERSION,
 )
-from manufacturing_ai_copilot.rag.query_engine import retrieve_matches
+from manufacturing_ai_copilot.rag.query_engine import retrieve_qdrant_matches
 from manufacturing_ai_copilot.agent.graph import run_agent
 from manufacturing_ai_copilot.db.errors import DatabaseUnavailableError
 
@@ -92,14 +92,13 @@ def health_check() -> dict[str, str]:
 def search_documents(request: SearchRequest) -> SearchResponse:
     try:
         # API 层只负责接收请求和返回响应，RAG 细节放在 query_engine.py
-        matches = retrieve_matches(
-            storage_dir=STORAGE_DIR,
+        matches = retrieve_qdrant_matches(
             question=request.question,
             similarity_top_k=request.top_k,
             department=request.department,
         )
     except FileNotFoundError as exc:
-        # storage 不存在或索引没构建时，说明服务暂时不可用
+        # 检索依赖未准备好时，说明服务暂时不可用。
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     except Exception as exc:
