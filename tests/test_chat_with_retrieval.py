@@ -127,3 +127,138 @@ def test_chat_with_retrieval_calls_qwen_and_returns_sources(monkeypatch):
         "retrieved_count": 2,
         "used_count": 2,
     }
+
+
+def test_chat_with_qdrant_retrieval_calls_qwen_and_returns_sources(monkeypatch):
+    def fake_retrieve_qdrant_raw_matches(
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
+        # Qdrant chat 需要保留过滤前结果，才能统计 retrieved_count / used_count。
+        assert similarity_top_k == 3
+        assert department is None
+        return [
+            {
+                "score": 0.9,
+                "document": "SMT设备报警处理SOP.md",
+                "title": "SMT设备报警处理SOP",
+                "content": "E203 处理步骤",
+                "metadata": {
+                    "doc_id": "smt_alarm_sop",
+                    "department": "生产部",
+                    "version": "v1.0",
+                },
+            },
+            {
+                "score": 0.3,
+                "document": "质量异常8D报告模板.md",
+                "title": "质量异常8D报告模板",
+                "content": "低相关内容",
+                "metadata": {
+                    "doc_id": "quality_8d_template",
+                    "department": "质量部",
+                    "version": "v1.0",
+                },
+            },
+        ]
+
+    def fake_generate_answer_with_qwen(
+        question: str,
+        matches: list[dict],
+        domain_type: str,
+    ):
+        assert len(matches) == 1
+        assert matches[0]["score"] == 0.9
+        assert domain_type == "equipment_sop"
+        return "fake qdrant answer"
+
+    monkeypatch.setattr(
+        query_engine,
+        "retrieve_qdrant_raw_matches",
+        fake_retrieve_qdrant_raw_matches,
+    )
+    monkeypatch.setattr(
+        query_engine,
+        "generate_answer_with_qwen",
+        fake_generate_answer_with_qwen,
+    )
+
+    result = query_engine.chat_with_qdrant_retrieval(
+        question="贴片机报警 E203 怎么处理？",
+        similarity_top_k=3,
+        department=None,
+        domain_type="equipment_sop",
+    )
+
+    assert result["answer"] == "fake qdrant answer"
+    assert result["sources"] == [
+        {
+            "doc_id": "smt_alarm_sop",
+            "title": "SMT设备报警处理SOP",
+            "document": "SMT设备报警处理SOP.md",
+            "department": "生产部",
+            "version": "v1.0",
+            "score": 0.9,
+        }
+    ]
+    assert result["retrieval"] == {
+        "top_k": 3,
+        "min_score": MIN_RETRIEVAL_SCORE,
+        "retrieved_count": 2,
+        "used_count": 1,
+    }
+
+
+def test_chat_with_qdrant_retrieval_returns_no_answer_without_qwen(monkeypatch):
+    def fake_retrieve_qdrant_raw_matches(
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+    ):
+        return [
+            {
+                "score": 0.3,
+                "document": "质量异常8D报告模板.md",
+                "title": "质量异常8D报告模板",
+                "content": "低相关内容",
+                "metadata": {
+                    "doc_id": "quality_8d_template",
+                    "department": "质量部",
+                    "version": "v1.0",
+                },
+            }
+        ]
+
+    def fail_if_qwen_is_called(
+        question: str,
+        matches: list[dict],
+        domain_type: str,
+    ):
+        raise AssertionError("Qwen should not be called for low-score qdrant matches")
+
+    monkeypatch.setattr(
+        query_engine,
+        "retrieve_qdrant_raw_matches",
+        fake_retrieve_qdrant_raw_matches,
+    )
+    monkeypatch.setattr(
+        query_engine,
+        "generate_answer_with_qwen",
+        fail_if_qwen_is_called,
+    )
+
+    result = query_engine.chat_with_qdrant_retrieval(
+        question="今天天气如何？",
+        similarity_top_k=3,
+        department=None,
+    )
+
+    assert result["answer"] == NO_ANSWER_MESSAGE
+    assert result["sources"] == []
+    assert result["retrieval"] == {
+        "top_k": 3,
+        "min_score": MIN_RETRIEVAL_SCORE,
+        "retrieved_count": 1,
+        "used_count": 0,
+    }

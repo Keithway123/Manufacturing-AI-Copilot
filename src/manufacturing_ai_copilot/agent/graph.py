@@ -4,7 +4,8 @@ from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from manufacturing_ai_copilot.core.config import MIN_RETRIEVAL_SCORE, NO_ANSWER_MESSAGE
-from manufacturing_ai_copilot.rag.query_engine import chat_with_retrieval
+from manufacturing_ai_copilot.rag.query_engine import chat_with_qdrant_retrieval
+
 from manufacturing_ai_copilot.agent.classifier import (
     ROUTE_RAG_ANSWER,
     ROUTE_TOOL_NODE,
@@ -59,8 +60,7 @@ def classify_question_node(state: AgentState) -> dict:
 
 
 def rag_answer_node(state: AgentState) -> dict:
-    result = chat_with_retrieval(
-        storage_dir=state["storage_dir"],
+    result = chat_with_qdrant_retrieval(
         question=state["question"],
         similarity_top_k=state["top_k"],
         department=state["department"],

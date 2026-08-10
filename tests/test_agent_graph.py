@@ -6,14 +6,12 @@ from manufacturing_ai_copilot.agent import classifier
 
 
 def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
-    def fake_chat_with_retrieval(
-        storage_dir: Path,
+    def fake_chat_with_qdrant_retrieval(
         question: str,
         similarity_top_k: int,
         department: str | None,
         domain_type: str,
     ) -> dict:
-        assert storage_dir == Path("fake-storage")
         assert question == "贴片机报警 E203 怎么处理？"
         assert similarity_top_k == 3
         assert department == "生产部"
@@ -42,8 +40,8 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
 
     monkeypatch.setattr(
         graph,
-        "chat_with_retrieval",
-        fake_chat_with_retrieval,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
     )
 
     result = graph.run_agent(
@@ -65,8 +63,7 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
 
 
 def test_run_agent_marks_answer_as_weak_when_sources_are_missing(monkeypatch):
-    def fake_chat_with_retrieval(
-        storage_dir: Path,
+    def fake_chat_with_qdrant_retrieval(
         question: str,
         similarity_top_k: int,
         department: str | None,
@@ -86,8 +83,8 @@ def test_run_agent_marks_answer_as_weak_when_sources_are_missing(monkeypatch):
 
     monkeypatch.setattr(
         graph,
-        "chat_with_retrieval",
-        fake_chat_with_retrieval,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
     )
 
     result = graph.run_agent(
@@ -112,10 +109,14 @@ def test_run_agent_marks_answer_as_weak_when_sources_are_missing(monkeypatch):
 
 
 def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
-    def fake_chat_with_retrieval(**kwargs):
+    def fake_chat_with_qdrant_retrieval(**kwargs):
         raise AssertionError("unknown question should not call RAG")
 
-    monkeypatch.setattr(graph, "chat_with_retrieval", fake_chat_with_retrieval)
+    monkeypatch.setattr(
+        graph,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
+    )
 
     result = graph.run_agent(
         question="今天天气如何",
@@ -173,7 +174,7 @@ def test_tool_node_returns_work_order_tool_result(monkeypatch):
 
 def test_run_agent_routes_work_order_status_question_to_tool_node(monkeypatch):
     # 如果路由误走 RAG，这个 fake 会让测试失败。
-    def fake_chat_with_retrieval(**kwargs):
+    def fake_chat_with_qdrant_retrieval(**kwargs):
         raise AssertionError("tool request should not call RAG")
 
     def fake_query_work_order_status(work_order_id):
@@ -190,7 +191,11 @@ def test_run_agent_routes_work_order_status_question_to_tool_node(monkeypatch):
             "source": "database",
         }
 
-    monkeypatch.setattr(graph, "chat_with_retrieval", fake_chat_with_retrieval)
+    monkeypatch.setattr(
+        graph,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
+    )
     monkeypatch.setattr(
         graph,
         "query_work_order_status",

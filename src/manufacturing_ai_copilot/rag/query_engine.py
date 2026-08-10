@@ -14,7 +14,7 @@ from manufacturing_ai_copilot.core.config import (
 from manufacturing_ai_copilot.rag.qdrant_client import get_qdrant_client
 
 
-# Qdrant
+# Qdrant /search
 def build_match_from_node(node_with_score) -> dict:
     node = node_with_score.node
     metadata = node.metadata or {}
@@ -53,22 +53,6 @@ def load_qdrant_retriever(
         similarity_top_k=similarity_top_k,
         filters=build_metadata_filters(department),
     )
-
-
-def retrieve_qdrant_matches(
-    question: str,
-    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
-    department: str | None = None,
-) -> list[dict]:
-    retriever = load_qdrant_retriever(
-        similarity_top_k=similarity_top_k,
-        department=department,
-    )
-
-    nodes = retriever.retrieve(question)
-    matches = [build_match_from_node(node) for node in nodes]
-
-    return filter_matches_by_score(matches)
 
 
 # 过滤低分的match
@@ -228,6 +212,83 @@ def chat_with_retrieval(
         department=department,
     )
     # answer = build_retrieval_answer(matches)
+    filtered_matches = filter_matches_by_score(matches)
+
+    if not filtered_matches:
+        return {
+            "question": question,
+            "answer": NO_ANSWER_MESSAGE,
+            "sources": [],
+            "retrieval": {
+                "top_k": similarity_top_k,
+                "min_score": MIN_RETRIEVAL_SCORE,
+                "retrieved_count": len(matches),
+                "used_count": 0,
+            },
+        }
+
+    answer = generate_answer_with_qwen(
+        question=question,
+        matches=filtered_matches,
+        domain_type=domain_type,
+    )
+
+    sources = build_sources(filtered_matches)
+
+    return {
+        "question": question,
+        "answer": answer,
+        "sources": sources,
+        "retrieval": {
+            "top_k": similarity_top_k,
+            "min_score": MIN_RETRIEVAL_SCORE,
+            "retrieved_count": len(matches),
+            "used_count": len(filtered_matches),
+        },
+    }
+
+
+def retrieve_qdrant_raw_matches(
+    question: str,
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+    department: str | None = None,
+) -> list[dict]:
+    retriever = load_qdrant_retriever(
+        similarity_top_k=similarity_top_k,
+        department=department,
+    )
+
+    nodes = retriever.retrieve(question)
+
+    return [build_match_from_node(node) for node in nodes]
+
+
+def retrieve_qdrant_matches(
+    question: str,
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+    department: str | None = None,
+) -> list[dict]:
+    matches = retrieve_qdrant_raw_matches(
+        question=question,
+        similarity_top_k=similarity_top_k,
+        department=department,
+    )
+
+    return filter_matches_by_score(matches)
+
+
+def chat_with_qdrant_retrieval(
+    question: str,
+    similarity_top_k: int = DEFAULT_RETRIEVAL_TOP_K,
+    department: str | None = None,
+    domain_type: str = "general_knowledge",
+) -> dict:
+    matches = retrieve_qdrant_raw_matches(
+        question=question,
+        similarity_top_k=similarity_top_k,
+        department=department,
+    )
+
     filtered_matches = filter_matches_by_score(matches)
 
     if not filtered_matches:
