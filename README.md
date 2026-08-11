@@ -77,6 +77,8 @@ Start Qdrant first:
 docker compose up -d qdrant
 ```
 
+When running with Docker Compose, Qdrant is accessed through the internal service URL configured in `docker-compose.yml`.
+
 Then build the index from documents under `data/raw/`:
 
 ```powershell
@@ -122,6 +124,12 @@ Compose starts:
 - Qdrant for vector retrieval
 
 Before using RAG `/chat`, make sure the Qdrant collection has been built with `scripts.build_index`.
+
+Initialize database seed data before testing Tool questions:
+
+```powershell
+docker compose run --rm manufacturing-api python -m scripts.init_database
+```
 
 ## API Endpoints
 
