@@ -62,7 +62,7 @@ def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
     assert result["answer_review"]["used_count"] == 1
 
 
-def test_run_agent_marks_answer_as_weak_when_sources_are_missing(monkeypatch):
+def test_run_agent_marks_no_answer_as_not_applicable(monkeypatch):
     def fake_chat_with_qdrant_retrieval(
         question: str,
         similarity_top_k: int,
@@ -71,12 +71,12 @@ def test_run_agent_marks_answer_as_weak_when_sources_are_missing(monkeypatch):
     ) -> dict:
         return {
             "question": question,
-            "answer": "fake weak answer",
+            "answer": NO_ANSWER_MESSAGE,
             "sources": [],
             "retrieval": {
                 "top_k": similarity_top_k,
                 "min_score": 0.6,
-                "retrieved_count": 1,
+                "retrieved_count": 3,
                 "used_count": 0,
             },
         }
@@ -96,10 +96,55 @@ def test_run_agent_marks_answer_as_weak_when_sources_are_missing(monkeypatch):
 
     assert result["question_type"] == classifier.KNOWLEDGE_QA
     assert result["route"] == classifier.ROUTE_RAG_ANSWER
+    assert result["answer"] == NO_ANSWER_MESSAGE
+    assert (
+        result["answer_review"]["answer_quality"]
+        == graph.ANSWER_QUALITY_NOT_APPLICABLE
+    )
+    assert result["answer_review"]["needs_review"] is False
+    assert result["answer_review"]["has_sources"] is False
+    assert result["answer_review"]["used_count"] == 0
+    assert "human_review_required" not in result["answer_review"]
+    assert "human_review_status" not in result["answer_review"]
+
+
+def test_run_agent_routes_inconsistent_rag_result_to_human_review(monkeypatch):
+    def fake_chat_with_qdrant_retrieval(
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+        domain_type: str,
+    ) -> dict:
+        return {
+            "question": question,
+            "answer": "fake weak answer",
+            # 有 Chunk 被使用但没有来源，说明证据链状态不一致。
+            "sources": [],
+            "retrieval": {
+                "top_k": similarity_top_k,
+                "min_score": 0.6,
+                "retrieved_count": 1,
+                "used_count": 1,
+            },
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
+    )
+
+    result = graph.run_agent(
+        question="贴片机报警 E203 怎么处理？",
+        storage_dir=Path("fake-storage"),
+        top_k=3,
+        department="生产部",
+    )
+
     assert result["answer_review"]["answer_quality"] == graph.ANSWER_QUALITY_WEAK
     assert result["answer_review"]["needs_review"] is True
     assert result["answer_review"]["has_sources"] is False
-    assert result["answer_review"]["used_count"] == 0
+    assert result["answer_review"]["used_count"] == 1
     assert result["answer_review"]["human_review_required"] is True
     assert (
         result["answer_review"]["human_review_status"]

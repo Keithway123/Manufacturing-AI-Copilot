@@ -24,6 +24,9 @@ ANSWER_QUALITY_GROUNDED = "grounded"
 ANSWER_QUALITY_WEAK = "weak"
 ANSWER_QUALITY_NOT_APPLICABLE = "not_applicable"
 
+RAG_RESULT_ROUTE_REVIEW = "review"
+RAG_RESULT_ROUTE_NO_ANSWER = "no_answer"
+
 REVIEW_ROUTE_FINAL = "final"
 REVIEW_ROUTE_HUMAN_REVIEW = "human_review"
 HUMAN_REVIEW_STATUS_REQUIRED = "requires_manual_review"
@@ -91,6 +94,25 @@ def review_answer_node(state: AgentState) -> dict:
             "needs_review": not is_grounded,
             "has_sources": has_sources,
             "used_count": used_count,
+        }
+    }
+
+
+def route_by_rag_result(state: AgentState) -> str:
+    # used_count = 0 表示没有证据生成答案，不属于回答质量问题。
+    if state["retrieval"].get("used_count", 0) == 0:
+        return RAG_RESULT_ROUTE_NO_ANSWER
+
+    return RAG_RESULT_ROUTE_REVIEW
+
+
+def no_answer_result_node(state: AgentState) -> dict:
+    return {
+        "answer_review": {
+            "answer_quality": ANSWER_QUALITY_NOT_APPLICABLE,
+            "needs_review": False,
+            "has_sources": False,
+            "used_count": 0,
         }
     }
 
@@ -181,6 +203,7 @@ def build_graph():
     graph_builder.add_node("rag_answer", rag_answer_node)
     graph_builder.add_node("tool_node", tool_node)
     graph_builder.add_node("fallback", fallback_node)
+    graph_builder.add_node("no_answer_result", no_answer_result_node)
     graph_builder.add_node("review_answer", review_answer_node)
     graph_builder.add_node("human_review_stub", human_review_stub_node)
 
@@ -195,7 +218,15 @@ def build_graph():
         },
     )
     graph_builder.add_edge("tool_node", END)
-    graph_builder.add_edge("rag_answer", "review_answer")
+    graph_builder.add_conditional_edges(
+        "rag_answer",
+        route_by_rag_result,
+        {
+            RAG_RESULT_ROUTE_REVIEW: "review_answer",
+            RAG_RESULT_ROUTE_NO_ANSWER: "no_answer_result",
+        },
+    )
+    graph_builder.add_edge("no_answer_result", END)
     graph_builder.add_conditional_edges(
         "review_answer",
         route_by_answer_review,
