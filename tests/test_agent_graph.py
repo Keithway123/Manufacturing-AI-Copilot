@@ -1,0 +1,322 @@
+# 只测 Agent Graph 是否把 State 正确传给 RAG 层，并把结果写回 State
+from pathlib import Path
+from manufacturing_ai_copilot.agent import graph
+from manufacturing_ai_copilot.core.config import NO_ANSWER_MESSAGE
+from manufacturing_ai_copilot.agent import classifier
+
+
+def test_run_agent_calls_rag_node_and_returns_final_state(monkeypatch):
+    def fake_chat_with_qdrant_retrieval(
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+        domain_type: str,
+    ) -> dict:
+        assert question == "贴片机报警 E203 怎么处理？"
+        assert similarity_top_k == 3
+        assert department == "生产部"
+        assert domain_type == classifier.EQUIPMENT_SOP
+
+        return {
+            "question": question,
+            "answer": "fake answer",
+            "sources": [
+                {
+                    "doc_id": "smt_alarm_sop",
+                    "title": "SMT设备报警处理SOP",
+                    "document": "SMT设备报警处理SOP.md",
+                    "department": "生产部",
+                    "version": "v1.0",
+                    "score": 0.9,
+                }
+            ],
+            "retrieval": {
+                "top_k": 3,
+                "min_score": 0.6,
+                "retrieved_count": 3,
+                "used_count": 1,
+            },
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
+    )
+
+    result = graph.run_agent(
+        question="贴片机报警 E203 怎么处理？",
+        storage_dir=Path("fake-storage"),
+        top_k=3,
+        department="生产部",
+    )
+
+    assert result["answer"] == "fake answer"
+    assert result["sources"][0]["doc_id"] == "smt_alarm_sop"
+    assert result["retrieval"]["used_count"] == 1
+    assert result["question_type"] == classifier.KNOWLEDGE_QA
+    assert result["route"] == classifier.ROUTE_RAG_ANSWER
+    assert result["answer_review"]["answer_quality"] == graph.ANSWER_QUALITY_GROUNDED
+    assert result["answer_review"]["needs_review"] is False
+    assert result["answer_review"]["has_sources"] is True
+    assert result["answer_review"]["used_count"] == 1
+
+
+def test_run_agent_marks_no_answer_as_not_applicable(monkeypatch):
+    def fake_chat_with_qdrant_retrieval(
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+        domain_type: str,
+    ) -> dict:
+        return {
+            "question": question,
+            "answer": NO_ANSWER_MESSAGE,
+            "sources": [],
+            "retrieval": {
+                "top_k": similarity_top_k,
+                "min_score": 0.6,
+                "retrieved_count": 3,
+                "used_count": 0,
+            },
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
+    )
+
+    result = graph.run_agent(
+        question="贴片机报警 E203 怎么处理？",
+        storage_dir=Path("fake-storage"),
+        top_k=3,
+        department="生产部",
+    )
+
+    assert result["question_type"] == classifier.KNOWLEDGE_QA
+    assert result["route"] == classifier.ROUTE_RAG_ANSWER
+    assert result["answer"] == NO_ANSWER_MESSAGE
+    assert (
+        result["answer_review"]["answer_quality"]
+        == graph.ANSWER_QUALITY_NOT_APPLICABLE
+    )
+    assert result["answer_review"]["needs_review"] is False
+    assert result["answer_review"]["has_sources"] is False
+    assert result["answer_review"]["used_count"] == 0
+    assert "human_review_required" not in result["answer_review"]
+    assert "human_review_status" not in result["answer_review"]
+
+
+def test_run_agent_routes_inconsistent_rag_result_to_human_review(monkeypatch):
+    def fake_chat_with_qdrant_retrieval(
+        question: str,
+        similarity_top_k: int,
+        department: str | None,
+        domain_type: str,
+    ) -> dict:
+        return {
+            "question": question,
+            "answer": "fake weak answer",
+            # 有 Chunk 被使用但没有来源，说明证据链状态不一致。
+            "sources": [],
+            "retrieval": {
+                "top_k": similarity_top_k,
+                "min_score": 0.6,
+                "retrieved_count": 1,
+                "used_count": 1,
+            },
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
+    )
+
+    result = graph.run_agent(
+        question="贴片机报警 E203 怎么处理？",
+        storage_dir=Path("fake-storage"),
+        top_k=3,
+        department="生产部",
+    )
+
+    assert result["answer_review"]["answer_quality"] == graph.ANSWER_QUALITY_WEAK
+    assert result["answer_review"]["needs_review"] is True
+    assert result["answer_review"]["has_sources"] is False
+    assert result["answer_review"]["used_count"] == 1
+    assert result["answer_review"]["human_review_required"] is True
+    assert (
+        result["answer_review"]["human_review_status"]
+        == graph.HUMAN_REVIEW_STATUS_REQUIRED
+    )
+    assert result["answer_review"]["human_review_decision"] is None
+
+
+def test_run_agent_routes_unknown_question_to_fallback(monkeypatch):
+    def fake_chat_with_qdrant_retrieval(**kwargs):
+        raise AssertionError("unknown question should not call RAG")
+
+    monkeypatch.setattr(
+        graph,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
+    )
+
+    result = graph.run_agent(
+        question="今天天气如何",
+        storage_dir=Path("storage"),
+        top_k=3,
+    )
+
+    assert result["question_type"] == classifier.UNKNOWN
+    assert result["route"] == classifier.ROUTE_FALLBACK
+    assert result["answer"] == NO_ANSWER_MESSAGE
+    assert result["sources"] == []
+    assert result["retrieval"]["retrieved_count"] == 0
+    assert result["retrieval"]["used_count"] == 0
+    assert result["answer_review"] == {}
+
+
+def test_tool_node_returns_work_order_tool_result(monkeypatch):
+    def fake_query_work_order_status(work_order_id):
+        assert work_order_id == "WO-20260727-001"
+
+        return {
+            "tool_name": "query_work_order_status",
+            "work_order_id": work_order_id,
+            "found": True,
+            "status": "paused",
+            "product": "SMT Controller Board",
+            "line": "SMT-01",
+            "planned_quantity": 1000,
+            "completed_quantity": 420,
+            "pause_reason": "equipment_alarm",
+            "source": "database",
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "query_work_order_status",
+        fake_query_work_order_status,
+    )
+
+    result = graph.tool_node(
+        {
+            "question": "查询工单 WO-20260727-001 当前状态",
+            "top_k": 3,
+        }
+    )
+
+    tool_result = result["tool_result"]
+
+    assert tool_result["found"] is True
+    assert tool_result["source"] == "database"
+    assert tool_result["status"] == "paused"
+    assert "WO-20260727-001" in result["answer"]
+    assert result["retrieval"]["used_count"] == 0
+
+
+def test_run_agent_routes_work_order_status_question_to_tool_node(monkeypatch):
+    # 如果路由误走 RAG，这个 fake 会让测试失败。
+    def fake_chat_with_qdrant_retrieval(**kwargs):
+        raise AssertionError("tool request should not call RAG")
+
+    def fake_query_work_order_status(work_order_id):
+        return {
+            "tool_name": "query_work_order_status",
+            "work_order_id": work_order_id,
+            "found": True,
+            "status": "paused",
+            "product": "SMT Controller Board",
+            "line": "SMT-01",
+            "planned_quantity": 1000,
+            "completed_quantity": 420,
+            "pause_reason": "equipment_alarm",
+            "source": "database",
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "chat_with_qdrant_retrieval",
+        fake_chat_with_qdrant_retrieval,
+    )
+    monkeypatch.setattr(
+        graph,
+        "query_work_order_status",
+        fake_query_work_order_status,
+    )
+
+    result = graph.run_agent(
+        question="查询工单 WO-20260727-001 当前状态",
+        storage_dir=Path("fake-storage"),
+        top_k=3,
+    )
+
+    assert result["question_type"] == classifier.TOOL_REQUEST
+    assert result["domain_type"] == classifier.WORK_ORDER_STATUS
+    assert result["route"] == classifier.ROUTE_TOOL_NODE
+
+    assert result["tool_result"]["tool_name"] == "query_work_order_status"
+    assert result["tool_result"]["work_order_id"] == "WO-20260727-001"
+    assert result["tool_result"]["status"] == "paused"
+
+    assert "WO-20260727-001" in result["answer"]
+    assert result["sources"] == []
+    assert result["retrieval"]["used_count"] == 0
+
+
+def test_tool_node_returns_not_found_answer(monkeypatch):
+    def fake_query_work_order_status(work_order_id):
+        return {
+            "tool_name": "query_work_order_status",
+            "work_order_id": work_order_id,
+            "found": False,
+            "source": "database",
+        }
+
+    monkeypatch.setattr(
+        graph,
+        "query_work_order_status",
+        fake_query_work_order_status,
+    )
+
+    result = graph.tool_node(
+        {"question": "查询工单 WO-20260727-001 当前状态", "top_k": 3}
+    )
+    tool_result = result["tool_result"]
+
+    assert tool_result["found"] is False
+    assert "status" not in tool_result
+    assert "未找到工单" in result["answer"]
+    assert "WO-20260727-001" in result["answer"]
+    assert result["sources"] == []
+    assert result["retrieval"]["used_count"] == 0
+
+
+def test_tool_node_requests_work_order_id_when_missing(monkeypatch):
+    def fake_query_work_order_status(work_order_id):
+        # 缺少工单号时不应该访问数据库工具
+        raise AssertionError("missing work order id should not query databaase")
+
+    monkeypatch.setattr(
+        graph,
+        "query_work_order_status",
+        fake_query_work_order_status,
+    )
+
+    result = graph.tool_node(
+        {
+            "question": "查询工单当前状态",
+            "top_k": 3,
+        }
+    )
+
+    tool_result = result["tool_result"]
+
+    assert tool_result["work_order_id"] is None
+    assert tool_result["found"] is False
+    assert tool_result["reason"] == graph.TOOL_REASON_MISSING_WORK_ORDER_ID
+    assert "请提供工单号" in result["answer"]
+    assert result["sources"] == []
+    assert result["retrieval"]["used_count"] == 0

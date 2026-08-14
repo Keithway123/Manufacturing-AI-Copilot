@@ -1,159 +1,309 @@
 # Manufacturing AI Copilot
 
-Manufacturing AI Copilot 是一个面向制造企业场景的“智能知识库 + 多 Agent 助手系统”。
+Manufacturing AI Copilot 是一个面向制造企业的 AI 助手项目，基于 FastAPI、LangGraph、Qdrant、PostgreSQL 和 Dify 构建。
 
-项目目标不是只做一个简单聊天机器人，而是逐步完成一个能演示、能部署、能面试讲清楚的 AI 应用工程项目。
+当前版本支持制造知识库问答、基于 Qdrant 的 RAG 检索、基于 PostgreSQL 的工单状态查询、Fallback 处理，以及 Docker Compose 本地部署。
 
-## 项目目标
+## 当前能力
 
-做一个制造企业内部 AI Copilot，支持：
-
-- SOP 问答
-- 设备报警处理查询
-- 质量异常分析
-- 8D 报告生成
-- MES / IT 系统说明查询
-- 多 Agent 流程编排
-- 人工确认和结果溯源
-
-## 技术栈
-
-```text
-FastAPI         后端接口
-LlamaIndex      文档入库、RAG、引用溯源
-LangGraph       多 Agent 编排、状态机、人工确认
-Dify            可视化 Chat / Workflow 入口
-PostgreSQL      业务数据
-Qdrant/pgvector 向量库
-Docker Compose  工程化部署
-```
-
-## 阶段化技术边界
-
-当前阶段目标是先跑通最小 RAG 闭环。
-
-当前阶段必需：
-
-```text
-FastAPI
-LlamaIndex
-本地 Markdown 文档
-LlamaIndex 本地持久化索引
-```
-
-后续阶段再引入：
-
-```text
-LangGraph
-Dify
-PostgreSQL
-Qdrant / pgvector
-Docker Compose
-```
-
-这样可以先验证主流程，再逐步替换和扩展基础设施。
+- 提供 `/health`、`/search` 和 `/chat` 的 FastAPI 后端
+- 基于 Qdrant 检索制造业 Markdown 文档
+- 使用 LlamaIndex 完成文档解析、切块、向量化和 Retriever 集成
+- 通过 DashScope 调用 Qwen 生成答案
+- 使用 LangGraph 编排 Agent 流程
+- 支持 RAG、Tool 和 Fallback 三条分支
+- 通过 PostgreSQL 查询工单状态
+- 实现回答质量检查和 Human Review stub
+- 使用 Dify Chatflow 作为可视化演示入口
+- 使用 Dockerfile 和 Docker Compose 运行 FastAPI、PostgreSQL 和 Qdrant
+- 提供以 Qdrant 为默认后端的检索评估脚本
+- 使用 pytest 覆盖单元测试、集成测试和 API 测试
 
 ## 系统架构
 
+在线 Agent 问答链路：
+
 ```mermaid
-flowchart TD
-    U["User / Dify Chat"] --> API["FastAPI Backend"]
-    API --> G["LangGraph Agent Orchestrator"]
+flowchart LR
+    Client["Dify / Swagger / API 客户端"] --> API["FastAPI /chat"]
+    API --> Graph["LangGraph Agent"]
+    Graph --> Classifier["问题分类"]
 
-    G --> R["Knowledge QA Agent"]
-    G --> Q["Quality Analysis Agent"]
-    G --> T["Tool Agent"]
-    G --> P["Report Agent"]
-    G --> V["Review Agent"]
+    Classifier -->|知识库问题| RAG["RAG 节点"]
+    Classifier -->|工具请求| Tool["Tool 节点"]
+    Classifier -->|未知问题| Fallback["Fallback 节点"]
 
-    R --> LI["LlamaIndex RAG"]
-    LI --> VS["Qdrant / pgvector"]
-    LI --> DS["Document Store"]
+    RAG --> Retriever["LlamaIndex Retriever"]
+    Retriever --> Qdrant["Qdrant"]
+    Qdrant --> Filter["相似度分数过滤"]
+    Filter -->|存在可靠 Chunk| Qwen["Qwen 生成答案"]
+    Filter -->|没有可靠 Chunk| RAGNoAnswer["No-answer 响应"]
+    Qwen --> Review["回答质量检查"]
+    RAGNoAnswer --> NoAnswerResult["记录 not_applicable"]
+    NoAnswerResult --> Final
+    Review -->|Grounded| Final["最终回答"]
+    Review -->|Weak| Human["Human Review Stub"]
+    Human --> Final
 
-    T --> DB["PostgreSQL"]
-    P --> OUT["Markdown / 8D Report"]
+    Tool --> Repository["工单 Repository"]
+    Repository --> PostgreSQL["PostgreSQL"]
+    PostgreSQL --> ToolAnswer["工单状态回答"]
+    ToolAnswer --> Final
+
+    Fallback --> NoAnswer["No-answer 响应"]
+    NoAnswer --> Final
 ```
 
-## 第一里程碑
+离线索引构建链路：
 
-先做最小闭环：
+```mermaid
+flowchart LR
+    Markdown["data/raw Markdown"] --> Builder["scripts.build_index"]
+    Builder --> LlamaIndex["LlamaIndex 解析与切块"]
+    LlamaIndex --> Embedding["DashScope Embedding"]
+    Embedding --> Qdrant["Qdrant Collection"]
+```
+
+## 技术栈
+
+- Python 3.12
+- uv
+- FastAPI
+- LlamaIndex
+- LangGraph
+- DashScope / Qwen
+- Qdrant
+- PostgreSQL
+- Dify
+- Docker / Docker Compose
+- pytest
+
+## 项目结构
 
 ```text
-用户问题
-  -> FastAPI /chat
-  -> LlamaIndex 检索本地 Markdown 文档
-  -> 返回答案 + 引用来源
+src/manufacturing_ai_copilot/  应用源码
+scripts/                       命令行与工程脚本
+data/raw/                      模拟制造业 Markdown 文档
+data/eval/                     检索评估问题集
+tests/                         单元测试、集成测试和 API 测试
+Dockerfile                     FastAPI 应用镜像定义
+docker-compose.yml             FastAPI、PostgreSQL 和 Qdrant 服务编排
+.env.example                   可公开的环境变量模板
 ```
 
-验收示例：
+## 环境变量
+
+将 `.env.example` 复制为 `.env`，然后填写本地配置：
+
+```env
+DASHSCOPE_API_KEY=replace-with-your-dashscope-api-key
+LLM_MODEL=qwen3.7-plus
+EMBEDDING_MODEL=qwen3.7-text-embedding
+DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+DATABASE_URL=sqlite:///data/manufacturing.db
+POSTGRES_DB=manufacturing
+POSTGRES_USER=manufacturing
+POSTGRES_PASSWORD=replace-with-local-password
+QDRANT_URL=http://127.0.0.1:6333
+QDRANT_COLLECTION_NAME=manufacturing_knowledge
+```
+
+不要提交包含真实密钥和密码的 `.env`。
+
+## 使用 Docker Compose 快速启动
+
+### 1. 准备环境
+
+```powershell
+Copy-Item .env.example .env
+uv sync
+```
+
+在 `.env` 中填写真实的 `DASHSCOPE_API_KEY` 和本地 PostgreSQL 配置。
+
+### 2. 启动数据服务
+
+```powershell
+docker compose up -d postgres qdrant
+docker compose ps
+```
+
+等待 PostgreSQL 和 Qdrant 均显示为 `healthy`。
+
+### 3. 构建 Qdrant 索引
+
+`data/raw/` 不会复制进 FastAPI 镜像，因此索引构建脚本在宿主机执行：
+
+```powershell
+uv run --env-file .env python -m scripts.build_index
+```
+
+### 4. 构建 API 镜像并初始化 PostgreSQL
+
+```powershell
+docker compose build manufacturing-api
+docker compose run --rm manufacturing-api uv run python -m scripts.init_database
+```
+
+### 5. 启动 FastAPI
+
+```powershell
+docker compose up -d manufacturing-api
+```
+
+访问：
 
 ```text
-输入：贴片机报警 E203 怎么处理？
-
-输出：
-1. 可能原因
-2. 处理步骤
-3. 注意事项
-4. 来源文档：SMT设备报警处理SOP.md，第几段
+http://127.0.0.1:8001/health
+http://127.0.0.1:8001/docs
 ```
 
-## `/chat` 返回结构
+## 本地开发
 
-第一阶段 `/chat` 接口返回结构先固定为：
+保持 Qdrant 在 Docker 中运行，然后初始化本地 SQLite 数据库并启动 FastAPI：
+
+```powershell
+docker compose up -d qdrant
+uv run --env-file .env python -m scripts.init_database
+uv run --env-file .env uvicorn manufacturing_ai_copilot.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+访问：
+
+```text
+http://127.0.0.1:8000/health
+http://127.0.0.1:8000/docs
+```
+
+## 重建 RAG 索引
+
+原始文档、切块配置、Embedding 模型、向量维度或距离算法发生变化时，需要重建 Qdrant Collection：
+
+```powershell
+uv run --env-file .env python -m scripts.build_index
+```
+
+## API 接口
+
+| Method | Path | 作用 |
+| --- | --- | --- |
+| GET | `/health` | 检查 FastAPI 服务状态 |
+| POST | `/search` | 检索并返回匹配的 Chunk，用于调试召回效果 |
+| POST | `/chat` | 执行 Agent 流程并返回最终回答 |
+
+## 问答请求示例
+
+知识库问题：
 
 ```json
 {
-  "answer": "贴片机报警 E203 通常与吸嘴真空不足或送料异常有关...",
-  "sources": [
-    {
-      "document": "SMT设备报警处理SOP.md",
-      "section": "E203 报警处理",
-      "score": 0.86
-    }
-  ]
+  "question": "贴片机报警 E203 怎么处理？",
+  "top_k": 3,
+  "department": "生产部"
 }
 ```
 
-重点不是只让模型回答，而是返回可追溯的答案。
+Tool 问题：
 
-## 第一周任务
+```json
+{
+  "question": "查询 WO-20260727-001 工单状态",
+  "top_k": 3
+}
+```
 
-1. 建项目结构
-2. 准备 5 份模拟制造业文档
-3. 实现文档入库脚本
-4. 实现 `/health` 接口
-5. 实现 `/chat` 接口
-6. 返回带引用的 RAG 答案
+Fallback 问题：
 
-## 第一批模拟文档
+```json
+{
+  "question": "今天天气怎么样？",
+  "top_k": 3
+}
+```
+
+## 演示场景
+
+| 场景 | Agent 分支 | 外部依赖 | FastAPI 返回 | 当前 Dify 展示 |
+| --- | --- | --- | --- | --- |
+| E203 报警处理 | RAG | Qdrant + DashScope | `answer`、`sources`、`retrieval` | 仅 `answer` |
+| 工单状态查询 | Tool | PostgreSQL | 工单状态答案，`sources=[]` | 仅 `answer` |
+| 天气问题 | Fallback | 无业务外部依赖 | 范围提示，`sources=[]` | 仅 `answer` |
+
+当前 Dify 的 Direct Reply 只展示 `answer`。FastAPI 的 RAG 响应还包含 `sources` 和 `retrieval`，后续可以用于实现引用来源界面。
+
+### Dify 演示
+
+Chatflow 编排：
+
+![Dify Chatflow](assets/dify-chatflow.png)
+
+RAG 问答：
+
+![Dify RAG Demo](assets/dify-chatdemo1.png)
+
+Tool 与 Fallback：
+
+![Dify Tool and Fallback Demo](assets/dify-chatdemo2.png)
+
+## Dify 集成
+
+Dify 独立部署，不包含在本项目的 `docker-compose.yml` 中。Dify 只作为可视化演示入口，RAG、Tool、Fallback 和 LLM 等核心逻辑仍由 FastAPI 后端负责。
+
+推荐 Chatflow：
 
 ```text
-SMT设备报警处理SOP.md
-注塑机日常点检规范.md
-MES工单状态说明.md
-质量异常8D报告模板.md
-员工IT系统使用手册.md
+用户输入
+-> HTTP Request
+-> Code 节点：解析 JSON 响应 body
+-> Direct Reply：展示 answer
 ```
 
-## Markdown 文档元数据规范
+当 Dify 运行在 Docker Desktop 中时，HTTP Request 节点使用：
 
-第一批模拟文档统一使用 front matter：
-
-```markdown
----
-doc_id: smt_alarm_sop
-title: SMT设备报警处理SOP
-department: 生产部
-doc_type: SOP
-version: v1.0
-access_level: internal
----
+```text
+POST http://host.docker.internal:8001/chat
 ```
 
-这些字段后续用于权限过滤、来源追踪和企业知识库管理。
+请求体示例：
 
-## 当前状态
+```json
+{
+  "question": "{{user_input}}",
+  "top_k": 3
+}
+```
 
-项目记忆文档已初始化。
+其中 `{{user_input}}` 仅表示用户问题变量。请通过 Dify 的变量选择器插入开始节点中的用户输入，不要直接照抄该占位符。
 
-创建日期：2026-07-04
+Dify 应调用 `/chat`，而不是 `/search`。HTTP Request 节点返回的 `body` 是字符串，因此需要通过 Code 节点解析 JSON，并只向用户暴露所需字段。
+
+本地开发时，需要在 Dify 的 SSRF 策略中明确允许访问 `host.docker.internal`。生产环境中不应直接关闭全部 SSRF 防护。
+
+## 测试
+
+```powershell
+uv run pytest
+```
+
+## 检索评估
+
+使用 Qdrant 作为检索后端：
+
+```powershell
+uv run --env-file .env python -m scripts.evaluate_retrieval
+```
+
+## 当前边界
+
+- 问题分类仍使用关键词规则。
+- Tool 分支目前只支持工单状态查询。
+- 尚未实现 Tool + RAG 混合链路。
+- 尚未实现 Rerank、Hybrid Retrieval、增量索引和生产级健康检查。
+
+## 后续规划
+
+- 使用 LLM 完成意图分类
+- 实现 Tool + RAG 混合链路
+- 通过 Rerank 或 Hybrid Retrieval 提升检索质量
+- 增加索引健康检查和增量索引
+- 完善生产环境部署文档

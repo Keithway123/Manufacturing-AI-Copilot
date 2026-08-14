@@ -12,11 +12,19 @@ __pycache__/
 # Virtual environments
 .venv/
 venv/
+.vscode/
 
 # Secrets
 .env
 .env.*
+!.env.example
+.obsidian
 
 # Local data / generated files
-data/
 storage/
+notes/
+
+# SQLite runtime data 
+data/*.db
+data/*.db-shm 
+data/*.db-wal

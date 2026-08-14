@@ -1,0 +1,71 @@
+- id: smt_e203_alarm
+  question: "贴片机报警 E203 怎么处理？"
+  expected_title: "SMT设备报警处理SOP"
+  expected_doc_id: "smt_alarm_sop"
+  note: "应命中 SMT 报警 SOP，并回答吸嘴真空不足相关处理步骤。"
+
+- id: mes_work_order_paused
+  question: "MES 工单 Paused 状态是什么意思？"
+  expected_title: "MES工单状态说明"
+  expected_doc_id: "mes_work_order_status"
+  note: "应命中 MES 工单状态文档。"
+
+- id: injection_daily_check
+  question: "注塑机开机前要点检哪些项目？"
+  expected_title: "注塑机日常点检规范"
+  expected_doc_id: "injection_daily_check"
+  note: "应命中注塑机点检规范。"
+
+- id: quality_8d_d3
+  question: "8D 报告里的 D3 临时围堵措施要写什么？"
+  expected_title: "质量异常8D报告模板"
+  expected_doc_id: "quality_8d_template"
+  note: "应命中 8D 报告模板。"
+
+- id: it_vpn_access
+  question: "外网访问 MES 需要怎么操作？"
+  expected_title: "员工IT系统使用手册"
+  expected_doc_id: "employee_it_manual"
+  note: "应命中员工 IT 系统使用手册。"
+
+- id: smt_nozzle_vacuum_low
+  question: "贴片机吸嘴真空不足要怎么处理？"
+  expected_title: "SMT设备报警处理SOP"
+  expected_doc_id: "smt_alarm_sop"
+  note: "同义表达问题，不直接提 E203，但应命中 SMT 报警 SOP。"
+
+- id: mes_completed_modify
+  question: "工单完成后还能修改数据吗？"
+  expected_title: "MES工单状态说明"
+  expected_doc_id: "mes_work_order_status"
+  note: "应命中 Completed 状态下的数据修改规则。"
+
+- id: injection_abnormal_stop
+  question: "注塑机发现液压泄漏时应该怎么处理？"
+  expected_title: "注塑机日常点检规范"
+  expected_doc_id: "injection_daily_check"
+  note: "应命中注塑机异常处理内容。"
+
+- id: quality_root_cause_method
+  question: "质量异常做根因分析时可以用哪些方法？"
+  expected_title: "质量异常8D报告模板"
+  expected_doc_id: "quality_8d_template"
+  note: "应命中 D4 根因分析内容。"
+
+- id: it_password_reset
+  question: "员工忘记系统密码应该怎么办？"
+  expected_title: "员工IT系统使用手册"
+  expected_doc_id: "employee_it_manual"
+  note: "应命中密码重置流程。"
+
+- id: canteen_lunch_time
+  question: "食堂午餐几点开始？"
+  expected_title: null
+  expected_doc_id: null
+  note: "知识库没有食堂信息，应无高置信度命中。"
+
+- id: salary_payday
+  question: "这个月工资什么时候发？"
+  expected_title: null
+  expected_doc_id: null
+  note: "知识库没有薪资发放信息，应无高置信度命中。"
