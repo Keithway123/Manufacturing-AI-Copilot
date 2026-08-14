@@ -2,7 +2,7 @@ services:
   manufacturing-api:
     build: .
     image: manufacturing-ai-copilot-api:v0.1
-    container_name: manufacturing-api-test
+    container_name: manufacturing-api
     env_file:
       - .env
     environment:
@@ -12,9 +12,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      qdrant:
+        condition: service_healthy
     
-    volumes:
-      - ./storage:/app/storage
     ports:
       - "8001:8000"
 

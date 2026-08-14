@@ -3,7 +3,7 @@ from manufacturing_ai_copilot.db.seed import seed_work_orders
 
 
 def main() -> None:
-    # 必须瞎按确保表存在，种子数据才能写入。
+    # 先创建表结构，再写入可重复执行的种子数据。
     initialize_database()
 
     inserted_count = seed_work_orders()

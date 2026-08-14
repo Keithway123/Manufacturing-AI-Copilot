@@ -1,10 +1,10 @@
 [project]
 name = "manufacturing-ai-copilot"
 version = "0.1.0"
-description = "Add your description here"
+description = "A manufacturing AI copilot with Qdrant-based RAG, LangGraph agent orchestration, and PostgreSQL-backed tools."
 readme = "README.md"
 authors = [
-    { name = "Keithway123", email = "keithsway802@gmail.com" }
+    { name = "Keithway123" }
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.11.21,<0.12.0"]
+requires = ["uv_build>=0.12.1,<0.13.0"]
 build-backend = "uv_build"
 
 [dependency-groups]

@@ -15,6 +15,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 # 复制应用源码
 COPY src ./src
+COPY scripts ./scripts
 
 # 源码复制完成后，再安装当前项目
 RUN uv sync --frozen --no-dev
