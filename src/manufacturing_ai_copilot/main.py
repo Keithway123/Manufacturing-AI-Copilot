@@ -14,9 +14,25 @@ from manufacturing_ai_copilot.rag.query_engine import retrieve_qdrant_matches
 from manufacturing_ai_copilot.agent.graph import run_agent
 from manufacturing_ai_copilot.db.errors import DatabaseUnavailableError
 
+from pathlib import Path
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title=SERVICE_NAME, version=VERSION)
+WEB_DIR = Path(__file__).resolve().parent / "web"
+
+app.mount(
+    "/static",
+    StaticFiles(directory=WEB_DIR),
+    name="static",
+)
+
+
+@app.get("/", response_class=FileResponse)
+def home() -> FileResponse:
+    return FileResponse(WEB_DIR / "index.html")
 
 
 class SearchRequest(BaseModel):

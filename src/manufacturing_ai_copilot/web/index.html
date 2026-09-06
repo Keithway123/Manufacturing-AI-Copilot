@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manufacturing_ai_copilot</title>
+
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #172b42;
+            --muted: #697b8e;
+            --line: #e2e9f0;
+            --blue: #2463eb;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            background: #f3f6fa;
+            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+            line-height: 1.6;
+        }
+
+        button, textarea { font: inherit; }
+
+        .topbar {
+            padding: 18px max(24px, calc((100vw - 1120px) / 2));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+        }
+
+        .brand-icon {
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--ink);
+            color: white;
+            font-size: 15px;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: #f1f5fa;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        main {
+            max-width: 1120px;
+            margin: auto;
+            padding: 44px 24px;
+        }
+
+        .eyebrow {
+            color: var(--blue);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        h1 {
+            margin: 10px 0;
+            font-size: clamp(26px, 4vw, 36px);
+            letter-spacing: -1px;
+        }
+
+        .intro {
+            margin: 0 0 30px;
+            color: var(--muted);
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .card {
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: 0 8px 28px rgb(23 43 66 / 4%);
+        }
+
+        .card-header {
+            padding: 21px 24px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        h2 { margin: 0; font-size: 16px; }
+
+        .subtitle {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .card-body { padding: 24px; }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        textarea {
+            display: block;
+            width: 100%;
+            min-height: 170px;
+            padding: 16px;
+            resize: vertical;
+            border: 1px solid #d8e1eb;
+            border-radius: 12px;
+            background: #fbfcfe;
+            color: var(--ink);
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        textarea::placeholder { color: #7c8b9c; }
+
+        textarea:focus-visible {
+            outline: none;
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgb(36 99 235 / 12%);
+        }
+
+        .hint {
+            margin: 10px 0 18px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        #send {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            background: var(--blue);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        #send:hover { background: #194fc6; }
+
+        #send:focus-visible {
+            outline: 3px solid #91b6ff;
+            outline-offset: 3px;
+        }
+
+        #send:disabled {
+            opacity: .55;
+            cursor: wait;
+        }
+
+        .examples {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--line);
+        }
+
+        .examples-title {
+            margin-bottom: 10px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .example {
+            margin: 8px 0 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #f6f8fb;
+            color: #4c6077;
+            font-size: 13px;
+        }
+
+        #answer {
+            min-height: 240px;
+            overflow-wrap: anywhere;
+            white-space: normal;
+            font-size: 14px;
+            line-height: 1.9;
+        }
+
+        .empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 240px;
+            text-align: center;
+            white-space: normal;
+        }
+
+        .empty-icon {
+            display: grid;
+            place-items: center;
+            width: 54px;
+            height: 54px;
+            margin-bottom: 14px;
+            border-radius: 16px;
+            background: #edf3ff;
+            color: var(--blue);
+            font-size: 25px;
+        }
+
+        .empty p { margin: 4px 0; }
+
+        .empty-note { color: var(--muted); font-size: 13px; }
+
+        .answer-footer {
+            padding: 14px 24px;
+            border-top: 1px solid var(--line);
+            background: #fbfcfe;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        footer {
+            margin-top: 28px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        @media (max-width: 760px) {
+            main { padding: 28px 18px; }
+            .workspace { grid-template-columns: 1fr; }
+            .card-body, .card-header { padding: 20px; }
+            .topbar { padding: 16px 18px; }
+        }
+
+        .sources {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid var(--line);
+        }
+
+        .sources h3 {
+            margin: 0 0 10px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .sources ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .sources li {
+            margin: 8px 0;
+            font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+        #answer h1,
+        #answer h2,
+        #answer h3,
+        #answer h4 {
+            margin: 24px 0 12px;
+            font-size: 17px;
+            line-height: 1.5;
+        }
+
+        #answer > :first-child {
+            margin-top: 0;
+        }
+
+        #answer p {
+            margin: 12px 0;
+        }
+
+        #answer ul,
+        #answer ol {
+            margin: 12px 0;
+            padding-left: 24px;
+        }
+
+        #answer li {
+            margin: 8px 0;
+        }
+
+        #answer pre {
+            padding: 14px;
+            overflow-x: auto;
+            white-space: pre;
+            background: #f3f6fa;
+            border-radius: 8px;
+        }
+
+        #answer code {
+            font-family: Consolas, monospace;
+            font-size: 0.9em;
+        }
+
+        #answer table {
+            display: block;
+            max-width: 100%;
+            overflow-x: auto;
+            border-collapse: collapse;
+        }
+
+        #answer th,
+        #answer td {
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+        }
+
+        #answer img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-icon" aria-hidden="true">M</span>
+            <span>Manufacturing_ai_copilot</span>
+        </div>
+        <span class="badge">本地工作台</span>
+    </header>
+
+    <main>
+        <div class="eyebrow">MANUFACTURING AI COPILOT</div>
+        <h1>从一个问题，找到处理思路。</h1>
+        <p class="intro">查询设备 SOP、制造知识与工单状态。</p>
+
+        <div class="workspace">
+            <section class="card" aria-labelledby="question-heading">
+                <div class="card-header">
+                    <h2 id="question-heading">提出问题</h2>
+                    <p class="subtitle">提供具体信息，让查询更有针对性。</p>
+                </div>
+
+                <div class="card-body">
+                    <label for="question">你需要了解什么？</label>
+                    <textarea
+                        id="question"
+                        placeholder="例如：贴片机报警 E203 怎么处理？"
+                        aria-describedby="question-hint"
+                    ></textarea>
+
+                    <p class="hint" id="question-hint">
+                        建议包含设备名称、报警码或完整工单号。
+                    </p>
+
+                    <button id="send" type="button">发送问题 →</button>
+
+                    <div class="examples">
+                        <div class="examples-title">问题示例</div>
+                        <p class="example">贴片机报警 E203 怎么处理？</p>
+                        <p class="example">查询 WO-20260727-001 工单状态</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card" aria-labelledby="answer-heading">
+                <div class="card-header">
+                    <h2 id="answer-heading">回答与依据</h2>
+                    <p class="subtitle">集中查看处理建议与查询结果。</p>
+                </div>
+
+                <div class="card-body">
+                    <div id="answer" aria-live="polite" aria-atomic="true"><div class="empty">
+                        <div class="empty-icon" aria-hidden="true">⌕</div>
+                        <p>从左侧输入一个问题开始</p>
+                        <p class="empty-note">回答将在这里显示。</p>
+                    </div></div>
+                </div>
+
+                <div id="sources" class="sources" hidden>
+                <h3>参考来源</h3>
+                <ul id="source-list"></ul>
+                </div>
+
+                <div class="answer-footer">
+                    设备操作与异常处置，请结合适用版本的 SOP 核对。
+                </div>
+            </section>
+        </div>
+
+        <footer>每次提问请提供完整信息，当前暂不支持上下文追问。</footer>
+    </main>
+
+    <script src="/static/vendor/marked.umd.js"></script>
+    <script src="/static/vendor/purify.min.js"></script>
+
+    <script>
+    const questionInput = document.getElementById("question");
+    const sendButton = document.getElementById("send");
+    const answerBox = document.getElementById("answer");
+    const sourcesBox = document.getElementById("sources");
+    const sourceList = document.getElementById("source-list");
+
+    sendButton.addEventListener("click", async () => {
+        const question = questionInput.value.trim();
+
+        if (!question) {
+            alert("请输入问题。");
+            questionInput.focus();
+            return;
+        }
+
+        sendButton.disabled = true;
+        sendButton.textContent = "正在查询…";
+        answerBox.textContent = "正在等待回答…";
+
+        sourcesBox.hidden = true;
+        sourceList.replaceChildren();
+
+
+        try {
+            // 相对地址会使用当前页面的主机和端口。
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    question: question
+                })
+            });
+
+            // 错误响应不一定是 JSON，先读取文本。
+            const responseText = await response.text();
+
+            if (!response.ok) {
+                throw new Error(
+                    `HTTP ${response.status}\n${responseText || "服务器未返回详情"}`
+                );
+            }
+
+            const data = JSON.parse(responseText);
+
+            if (typeof data.answer !== "string") {
+                throw new Error("接口响应缺少有效的 answer 字段。");
+            }
+
+            // 将回答作为文本显示，避免把模型输出当成 HTML 执行。
+            const answerText = data.answer || "后端返回了空回答。";
+            const answerHtml = marked.parse(answerText);
+
+            answerBox.innerHTML = DOMPurify.sanitize(answerHtml);
+
+            const sources = Array.isArray(data.sources) ? data.sources : [];
+
+            for (const source of sources) {
+                const item = document.createElement("li");
+
+                const title = source.title || source.document || source.doc_id;
+                const details = [
+                    source.department,
+                    source.version
+                ].filter(Boolean);
+
+                item.textContent = details.length
+                    ? `${title} · ${details.join(" · ")}`
+                    : title;
+
+                sourceList.appendChild(item);
+            }
+
+            sourcesBox.hidden = sourceList.children.length === 0;
+        } catch (error) {
+            const message = error instanceof Error
+                ? error.message
+                : String(error);
+
+            answerBox.textContent = "本次查询失败，请重试。";
+            alert(`查询失败：\n${message}`);
+        } finally {
+            sendButton.disabled = false;
+            sendButton.textContent = "发送问题 →";
+        }
+    });
+    </script>
+</body>
+</html>
