@@ -25,11 +25,11 @@ QDRANT_VECTOR_SIZE = 1024
 QDRANT_DISTANCE = "Cosine"
 
 
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.7-plus")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.8-flash")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "qwen3.7-text-embedding")
 DASHSCOPE_BASE_URL = os.getenv(
     "DASHSCOPE_BASE_URL",
-    "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "https://ws-5gwqjx9a2tapu6yk.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
 )
 
 DEFAULT_RETRIEVAL_TOP_K = 3
