@@ -1204,16 +1204,16 @@ wheels = [
 
 [[package]]
 name = "llama-index-vector-stores-qdrant"
-version = "0.10.2"
+version = "0.10.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "grpcio" },
     { name = "llama-index-core" },
     { name = "qdrant-client" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1f/9f/6b335df0161d46e83894513d4f07f0617a45e0a4418ebecdbd53dd5477b9/llama_index_vector_stores_qdrant-0.10.2.tar.gz", hash = "sha256:3122b644901c7b58e616fd9e7ed4fd1ec2604c63f1b85c5d6ad44820af329be2", size = 14721, upload-time = "2026-07-02T15:02:33.807Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/ad/c1b834c46b2dd485df5187d7ea4f959a53fd93067c31996b5966158af599/llama_index_vector_stores_qdrant-0.10.3.tar.gz", hash = "sha256:4b7b7fea42dca453616c76e8fcb72ccaa72d5527f53774a549574927f3c3cf26", size = 14777, upload-time = "2026-08-13T18:08:32.781Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/75/d6/d50b4b2cfddacec12e1eb29c6884ff86c3017eab29ac7f8c13a4f5cbb3f3/llama_index_vector_stores_qdrant-0.10.2-py3-none-any.whl", hash = "sha256:51070d47d3374860e8072bfa7f5b079222a58a6f1e1d78443e2babc8cab6d0c9", size = 14998, upload-time = "2026-07-02T15:02:32.799Z" },
+    { url = "https://files.pythonhosted.org/packages/55/1d/44a230c80733a27dfdaed1977b0def20b4004e19650024e711a03a01e8c4/llama_index_vector_stores_qdrant-0.10.3-py3-none-any.whl", hash = "sha256:cb684add1a0e44b73cc6cb347c5e5a1ccf9384e452c6150a0b025f541dd0186b", size = 15054, upload-time = "2026-08-13T18:08:31.558Z" },
 ]
 
 [[package]]
@@ -1262,7 +1262,7 @@ requires-dist = [
     { name = "openai", specifier = ">=2.44.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "qdrant-client", specifier = "==1.18.0" },
+    { name = "qdrant-client", specifier = "==1.19.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.50.0" },
 ]
 
@@ -2145,7 +2145,7 @@ wheels = [
 
 [[package]]
 name = "qdrant-client"
-version = "1.18.0"
+version = "1.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "grpcio" },
@@ -2156,9 +2156,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/65/45/5b1bdd15a3c7730eefb9c113600829e20d689b82b5a23f9e07d107094004/qdrant_client-1.18.0.tar.gz", hash = "sha256:52e8ece1a7d40519801bf0b70713bfa0f6b7ae28c7275bbe0b0286fbed7f6db4", size = 352580, upload-time = "2026-05-11T14:12:38.702Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3a/33/c6e4ec45b4fca5a0b808e8804e60be54a6d7505b68b53c0b1d0d62ba86c1/qdrant_client-1.19.0.tar.gz", hash = "sha256:365395a04b0a26c309b25b7d8b1c99ef2071ec9a2b74bc8a5fd3b7a3642fe963", size = 350953, upload-time = "2026-08-04T14:32:56.923Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d6/10/c437bd2ac41ef30d3019063e6ce537dc111e9214473b337ee88f7fa6359a/qdrant_client-1.18.0-py3-none-any.whl", hash = "sha256:093aa8cf8a420ee3ad2a68b007e1378d7992b2600e0b53c193fc172674f659cd", size = 398126, upload-time = "2026-05-11T14:12:36.998Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/3c/480c61cc8d5a3e76bb44e86231f408c93643e5498beadbbeb381ab55d02b/qdrant_client-1.19.0-py3-none-any.whl", hash = "sha256:13602a2b3478a95ecdf42f97b93d7f703b63a3361cd912a04495a33a5ac14121", size = 396157, upload-time = "2026-08-04T14:32:55.734Z" },
 ]
 
 [[package]]

@@ -56,8 +56,28 @@ services:
       retries: 5
       start_period: 5s
 
+  qdrant-hybrid:
+    # 独立验证 Qdrant 1.19 的中文 BM25，不影响现有 Dense Collection。
+    image: qdrant/qdrant:v1.19.1
+    container_name: manufacturing-qdrant-hybrid
+
+    ports:
+      - "6335:6333"
+
+    volumes:
+      - qdrant_hybrid_data:/qdrant/storage
+
+    healthcheck:
+      test: ["CMD-SHELL","bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
 volumes:
   # 顶层声明 named volume，供postgres服务引用。
   postgres_data:
   # Qdrant的collection和points由Docker持久化管理。
   qdrant_data:
+  # Hybrid实验使用独立数据卷，避免修改已验证的Dense基线。
+  qdrant_hybrid_data:
