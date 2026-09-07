@@ -21,3 +21,21 @@ def test_get_qdrant_client_uses_configured_url(monkeypatch):
 
     assert isinstance(result, FakeQdrantClient)
     assert result.url == expected_url
+
+
+def test_get_qdrant_client_uses_explicit_url(monkeypatch):
+    expected_url = "http://qdrant-hybrid.test:6335"
+
+    class FakeQdrantClient:
+        def __init__(self, *, url: str):
+            self.url = url
+
+    monkeypatch.setattr(
+        qdrant_client,
+        "QdrantClient",
+        FakeQdrantClient,
+    )
+
+    result = qdrant_client.get_qdrant_client(url=expected_url)
+
+    assert result.url == expected_url

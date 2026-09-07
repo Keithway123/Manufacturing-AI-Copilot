@@ -21,6 +21,16 @@ QDRANT_COLLECTION_NAME = os.getenv(
     "QDRANT_COLLECTION_NAME",
     "manufacturing_knowledge",
 )
+
+QDRANT_HYBRID_URL = os.getenv(
+    "QDRANT_HYBRID_URL",
+    "http://127.0.0.1:6335",
+)
+
+QDRANT_HYBRID_COLLECTION_NAME = os.getenv(
+    "QDRANT_HYBRID_COLLECTION_NAME",
+    "manufacturing_knowledge_hybrid",
+)
 QDRANT_VECTOR_SIZE = 1024
 QDRANT_DISTANCE = "Cosine"
 
