@@ -6,11 +6,13 @@ from manufacturing_ai_copilot.core.config import (
     QDRANT_VECTOR_SIZE,
 )
 from manufacturing_ai_copilot.rag.qdrant_client import get_qdrant_client
+from manufacturing_ai_copilot.rag.sparse_embedding import encode_sparse
 
 DENSE_VECTOR_NAME = "dense"
 SPARSE_VECTOR_NAME = "sparse"
 
 
+# Build hybrid index Collection
 def recreate_hybrid_collection() -> QdrantClient:
     client = get_qdrant_client(QDRANT_HYBRID_URL)
 
@@ -34,3 +36,32 @@ def recreate_hybrid_collection() -> QdrantClient:
         },
     )
     return client
+
+
+def build_hybrid_point(
+    point_id: int | str,
+    text: str,
+    metadata: dict,
+    dense_vector: list[float],
+) -> models.PointStruct:
+
+    if len(dense_vector) != QDRANT_VECTOR_SIZE:
+        raise ValueError(
+            "Dense vector dimension mismatch: "
+            f"expected {QDRANT_VECTOR_SIZE}, "
+            f"got {len(dense_vector)}"
+        )
+
+    sparse_vector = encode_sparse(text)
+
+    payload = dict(metadata)
+    payload["text"] = text
+
+    return models.PointStruct(
+        id=point_id,
+        vector={
+            DENSE_VECTOR_NAME: dense_vector,
+            SPARSE_VECTOR_NAME: sparse_vector,
+        },
+        payload=payload,
+    )
