@@ -1,6 +1,8 @@
-import pytest
+from pathlib import Path
 
+import pytest
 from qdrant_client import models
+
 from manufacturing_ai_copilot.rag import hybrid_index_builder
 
 
@@ -152,3 +154,124 @@ def test_build_hybrid_point_rejects_wrong_dense_dimension():
             metadata={},
             dense_vector=invalid_dense_vector,
         )
+
+
+# 验证hybrid Node的传入参数以及返回值是否正确传递
+def test_build_hybrid_nodes_reuses_baseline_chunk_settings(monkeypatch):
+    raw_dir = Path("data/raw")
+    fake_documents = [object()]
+    fake_nodes = [object()]
+    received = {}
+
+    def fake_load_markdown_documents(received_raw_dir):
+        received["raw_dir"] = received_raw_dir
+        return fake_documents
+
+    class FakeSentenceSplitter:
+        def __init__(self, *, chunk_size, chunk_overlap):
+            received["chunk_size"] = chunk_size
+            received["chunk_overlap"] = chunk_overlap
+
+        def get_nodes_from_documents(self, documents):
+            received["documents"] = documents
+            return fake_nodes
+
+    monkeypatch.setattr(
+        hybrid_index_builder,
+        "load_markdown_documents",
+        fake_load_markdown_documents,
+    )
+    monkeypatch.setattr(
+        hybrid_index_builder,
+        "SentenceSplitter",
+        FakeSentenceSplitter,
+    )
+
+    result = hybrid_index_builder.build_hybrid_nodes(raw_dir)
+
+    assert received["raw_dir"] == raw_dir
+    assert received["chunk_size"] == hybrid_index_builder.DEFAULT_CHUNK_SIZE
+    assert received["chunk_overlap"] == hybrid_index_builder.DEFAULT_CHUNK_OVERLAP
+    assert received["documents"] is fake_documents
+    assert result is fake_nodes
+
+
+# 验证传入空Nodes时，不初始化embedding模型。
+def test_embed_hybrid_nodes_returns_empty_without_configuring(monkeypatch):
+    configured = False
+
+    def fake_configure_embedding():
+        nonlocal configured
+        configured = True
+
+    monkeypatch.setattr(
+        hybrid_index_builder,
+        "configure_embedding",
+        fake_configure_embedding,
+    )
+
+    result = hybrid_index_builder.embed_hybrid_nodes([])
+
+    assert result == []
+    assert configured is False
+
+
+# 传入Node
+def test_embed_hybrid_nodes_embeds_node_content_in_batch(monkeypatch):
+    received = {
+        "metadata_modes": [],
+    }
+    configured = False
+    fake_vectors = [
+        [0.1, 0.2],
+        [0.3, 0.4],
+    ]
+
+    class FakeNode:
+        def __init__(self, content):
+            self.content = content
+
+        def get_content(self, *, metadata_mode):
+            received["metadata_modes"].append(metadata_mode)
+            return self.content
+
+    class FakeEmbeddingModel:
+        def get_text_embedding_batch(self, texts):
+            received["texts"] = texts
+            return fake_vectors
+
+    class FakeSettings:
+        embed_model = FakeEmbeddingModel()
+
+    def fake_configure_embedding():
+        nonlocal configured
+        configured = True
+
+    monkeypatch.setattr(
+        hybrid_index_builder,
+        "configure_embedding",
+        fake_configure_embedding,
+    )
+    monkeypatch.setattr(
+        hybrid_index_builder,
+        "Settings",
+        FakeSettings(),
+    )
+
+    nodes = [
+        FakeNode("E203 报警处理"),
+        FakeNode("检查送料器通信线"),
+    ]
+
+    result = hybrid_index_builder.embed_hybrid_nodes(nodes)
+
+    assert configured is True
+    assert received["metadata_modes"] == [
+        hybrid_index_builder.MetadataMode.EMBED,
+        hybrid_index_builder.MetadataMode.EMBED,
+    ]
+    assert received["texts"] == [
+        "E203 报警处理",
+        "检查送料器通信线",
+    ]
+    assert result is fake_vectors
